@@ -8,6 +8,7 @@
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <script src="config.js"></script>
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
     <script>if (typeof pdfjsLib !== 'undefined') pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';</script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -7671,6 +7672,167 @@
             });
         }
 
+        // ============================================================
+        // AUTH - Gerenciamento de autenticação
+        // ============================================================
+        const AUTH_TOKEN_KEY = 'caixaclara_token';
+        const AUTH_USER_KEY = 'caixaclara_user';
+
+        const authManager = {
+            getToken: () => {
+                try { return sessionStorage.getItem(AUTH_TOKEN_KEY); } catch { return null; }
+            },
+            getUser: () => {
+                try {
+                    const u = sessionStorage.getItem(AUTH_USER_KEY);
+                    return u ? JSON.parse(u) : null;
+                } catch { return null; }
+            },
+            setSession: (token, usuario) => {
+                try {
+                    sessionStorage.setItem(AUTH_TOKEN_KEY, token);
+                    sessionStorage.setItem(AUTH_USER_KEY, JSON.stringify(usuario));
+                } catch {}
+            },
+            clearSession: () => {
+                try {
+                    sessionStorage.removeItem(AUTH_TOKEN_KEY);
+                    sessionStorage.removeItem(AUTH_USER_KEY);
+                } catch {}
+            },
+            // Injeta o token JWT nos headers das chamadas à API
+            authHeaders: () => {
+                const token = authManager.getToken();
+                return token ? { 'Authorization': `Bearer ${token}` } : {};
+            }
+        };
+
+        // Login Screen Component
+        function LoginScreen({ onLogin, authConfig }) {
+            const [erro, setErro] = useState(null);
+            const [carregando, setCarregando] = useState(false);
+            const loginBtnRef = React.useRef(null);
+
+            useEffect(() => {
+                if (!authConfig?.google_client_id) return;
+
+                // Aguardar a lib do Google carregar
+                const initGoogle = () => {
+                    if (typeof google === 'undefined' || !google.accounts) {
+                        setTimeout(initGoogle, 200);
+                        return;
+                    }
+
+                    google.accounts.id.initialize({
+                        client_id: authConfig.google_client_id,
+                        callback: async (response) => {
+                            setCarregando(true);
+                            setErro(null);
+                            try {
+                                const res = await fetch('/api/auth/login', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ google_token: response.credential })
+                                });
+                                const data = await res.json();
+
+                                if (!res.ok) {
+                                    setErro(data.mensagem || data.erro || 'Erro ao fazer login');
+                                    setCarregando(false);
+                                    return;
+                                }
+
+                                authManager.setSession(data.token, data.usuario);
+                                onLogin(data.usuario);
+                            } catch (e) {
+                                setErro('Erro de conexão com o servidor');
+                                setCarregando(false);
+                            }
+                        },
+                        auto_select: true,
+                    });
+
+                    if (loginBtnRef.current) {
+                        google.accounts.id.renderButton(loginBtnRef.current, {
+                            theme: 'outline',
+                            size: 'large',
+                            text: 'signin_with',
+                            shape: 'rectangular',
+                            width: 300,
+                            locale: 'pt-BR',
+                        });
+                    }
+
+                    // Tentar One Tap (login automático se já logou antes)
+                    google.accounts.id.prompt();
+                };
+
+                initGoogle();
+            }, [authConfig]);
+
+            return (
+                <div style={{
+                    minHeight: '100vh',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%)',
+                }}>
+                    <div style={{
+                        background: 'white',
+                        borderRadius: '1rem',
+                        padding: '3rem',
+                        width: '100%',
+                        maxWidth: '420px',
+                        textAlign: 'center',
+                        boxShadow: '0 25px 50px rgba(0,0,0,0.25)',
+                    }}>
+                        <div style={{ fontSize: '3rem', marginBottom: '0.5rem' }}>💰</div>
+                        <h1 style={{ fontSize: '1.75rem', fontWeight: '700', color: '#0f172a', margin: '0 0 0.5rem 0' }}>
+                            CaixaClara
+                        </h1>
+                        <p style={{ color: '#64748b', margin: '0 0 2rem 0', fontSize: '0.95rem' }}>
+                            Gestão financeira familiar
+                        </p>
+
+                        {carregando ? (
+                            <div style={{ padding: '1rem', color: '#64748b' }}>
+                                <p>Entrando...</p>
+                            </div>
+                        ) : (
+                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem' }}>
+                                <div ref={loginBtnRef}></div>
+
+                                {!authConfig?.google_client_id && (
+                                    <p style={{ color: '#f59e0b', fontSize: '0.85rem', margin: 0 }}>
+                                        Google Client ID não configurado no servidor
+                                    </p>
+                                )}
+                            </div>
+                        )}
+
+                        {erro && (
+                            <div style={{
+                                marginTop: '1rem',
+                                padding: '0.75rem 1rem',
+                                background: '#fef2f2',
+                                border: '1px solid #fecaca',
+                                borderRadius: '0.5rem',
+                                color: '#dc2626',
+                                fontSize: '0.9rem'
+                            }}>
+                                {erro}
+                            </div>
+                        )}
+
+                        <p style={{ color: '#94a3b8', fontSize: '0.75rem', marginTop: '2rem', marginBottom: 0 }}>
+                            Apenas membros autorizados da família podem acessar
+                        </p>
+                    </div>
+                </div>
+            );
+        }
+
         // Main App Component
         function App() {
             const [currentPage, setCurrentPage] = useState('visao-geral');
@@ -7681,6 +7843,74 @@
             const [carregando, setCarregando] = useState(!!APPS_SCRIPT_URL);
             const [salvando, setSalvando] = useState(false);
             const [erroConexao, setErroConexao] = useState(null);
+
+            // Auth state
+            const [authConfig, setAuthConfig] = useState(null);
+            const [usuario, setUsuario] = useState(authManager.getUser());
+            const [authCarregando, setAuthCarregando] = useState(true);
+
+            // Verificar configuração de auth ao iniciar
+            useEffect(() => {
+                async function checkAuth() {
+                    try {
+                        const res = await fetch('/api/auth/config');
+                        const config = await res.json();
+                        setAuthConfig(config);
+
+                        if (!config.auth_enabled) {
+                            // Auth desabilitado (dev mode) - acesso livre
+                            setUsuario({ email: 'dev@local', nome: 'Dev Mode', foto: null });
+                        } else if (authManager.getToken()) {
+                            // Tem token salvo - validar
+                            const meRes = await fetch('/api/auth/me', {
+                                headers: authManager.authHeaders()
+                            });
+                            if (meRes.ok) {
+                                const meData = await meRes.json();
+                                setUsuario(meData.usuario);
+                            } else {
+                                // Token inválido/expirado
+                                authManager.clearSession();
+                                setUsuario(null);
+                            }
+                        }
+                    } catch (e) {
+                        // Servidor offline - se tiver dados em cache, permitir uso
+                        console.warn('Não foi possível verificar auth:', e);
+                        if (!authManager.getToken()) setUsuario(null);
+                    }
+                    setAuthCarregando(false);
+                }
+                checkAuth();
+            }, []);
+
+            const handleLogout = () => {
+                authManager.clearSession();
+                setUsuario(null);
+                if (typeof google !== 'undefined' && google.accounts) {
+                    google.accounts.id.disableAutoSelect();
+                }
+            };
+
+            // Se auth ainda carregando, mostrar splash
+            if (authCarregando) {
+                return (
+                    <div style={{
+                        minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%)', color: '#93c5fd'
+                    }}>
+                        <div style={{ textAlign: 'center' }}>
+                            <p style={{ fontSize: '2.5rem', margin: 0 }}>💰</p>
+                            <p style={{ fontSize: '1.1rem', marginTop: '0.75rem' }}>CaixaClara</p>
+                        </div>
+                    </div>
+                );
+            }
+
+            // Se não logado, mostrar tela de login
+            if (!usuario) {
+                return <LoginScreen onLogin={setUsuario} authConfig={authConfig} />;
+            }
 
             // Carregar dados reais da planilha ao iniciar
             useEffect(() => {
@@ -8042,11 +8272,28 @@
                         </div>
 
                         <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '1.5rem', borderTop: '1px solid rgba(255,255,255,0.1)', fontSize: '0.75rem', color: '#64748b' }}>
+                            {/* User info */}
+                            {usuario && usuario.email !== 'dev@local' && (
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
+                                    {usuario.foto ? (
+                                        <img src={usuario.foto} alt="" style={{ width: 24, height: 24, borderRadius: '50%' }} referrerPolicy="no-referrer" />
+                                    ) : (
+                                        <span style={{ width: 24, height: 24, borderRadius: '50%', background: '#3b82f6', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '0.65rem', fontWeight: 600 }}>
+                                            {(usuario.nome || '?')[0].toUpperCase()}
+                                        </span>
+                                    )}
+                                    <span style={{ color: '#cbd5e1', fontSize: '0.8rem', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                        {usuario.nome}
+                                    </span>
+                                    <span onClick={handleLogout} style={{ cursor: 'pointer', color: '#94a3b8', fontSize: '0.7rem', padding: '0.2rem 0.4rem', borderRadius: '0.25rem', border: '1px solid rgba(255,255,255,0.1)' }}
+                                        title="Sair">Sair</span>
+                                </div>
+                            )}
                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
                                 <span style={{ width: 8, height: 8, borderRadius: '50%', background: conectado ? '#22c55e' : '#f59e0b' }}></span>
                                 <span>{conectado ? 'Planilha conectada' : 'Modo demo'}</span>
                             </div>
-                            {salvando && <p style={{ margin: 0, color: '#93c5fd' }}>💾 Salvando...</p>}
+                            {salvando && <p style={{ margin: 0, color: '#93c5fd' }}>Salvando...</p>}
                             <p style={{ margin: '0.25rem 0 0 0' }}>CaixaClara v2</p>
                         </div>
                     </div>

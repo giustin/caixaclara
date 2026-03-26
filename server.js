@@ -13,6 +13,7 @@ const sheetsService = require('./services/sheets');
 const classifierService = require('./services/classifier');
 const projectionsService = require('./services/projections');
 const importerService = require('./services/importer');
+const authService = require('./services/auth');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -42,6 +43,80 @@ const upload = multer({ storage });
 const asyncHandler = (fn) => (req, res, next) => {
   Promise.resolve(fn(req, res, next)).catch(next);
 };
+
+// ============================================================================
+// ROTAS: AUTENTICAÇÃO (públicas - sem middleware)
+// ============================================================================
+
+/**
+ * POST /api/auth/login
+ * Recebe token do Google, valida, verifica whitelist, retorna JWT
+ * Body: { google_token }
+ */
+app.post('/api/auth/login', asyncHandler(async (req, res) => {
+  const { google_token } = req.body;
+
+  if (!google_token) {
+    return res.status(400).json({ erro: 'Token do Google não fornecido' });
+  }
+
+  // 1. Validar token com Google
+  const usuario = await authService.validarGoogleToken(google_token);
+
+  // 2. Verificar whitelist
+  if (!authService.emailPermitido(usuario.email)) {
+    console.warn(`Login negado para: ${usuario.email}`);
+    return res.status(403).json({
+      erro: 'Acesso não autorizado',
+      mensagem: 'Este email não tem permissão para acessar o CaixaClara'
+    });
+  }
+
+  // 3. Gerar JWT
+  const token = authService.gerarJWT(usuario);
+
+  console.log(`Login bem-sucedido: ${usuario.email}`);
+
+  res.json({
+    token,
+    usuario: {
+      email: usuario.email,
+      nome: usuario.nome,
+      foto: usuario.foto
+    }
+  });
+}));
+
+/**
+ * GET /api/auth/me
+ * Retorna dados do usuário logado (valida JWT)
+ */
+app.get('/api/auth/me', authService.authMiddleware, (req, res) => {
+  res.json({ usuario: req.usuario });
+});
+
+/**
+ * GET /api/auth/config
+ * Retorna o Google Client ID para o frontend (público)
+ */
+app.get('/api/auth/config', (req, res) => {
+  res.json({
+    google_client_id: authService.GOOGLE_CLIENT_ID || null,
+    auth_enabled: !!(authService.GOOGLE_CLIENT_ID)
+  });
+});
+
+// ============================================================================
+// MIDDLEWARE: Proteger todas as rotas /api/* abaixo deste ponto
+// ============================================================================
+app.use('/api', (req, res, next) => {
+  // Rotas de auth já foram definidas acima, não passam por aqui
+  // Permitir acesso sem auth se GOOGLE_CLIENT_ID não estiver configurado (dev mode)
+  if (!authService.GOOGLE_CLIENT_ID) {
+    return next();
+  }
+  return authService.authMiddleware(req, res, next);
+});
 
 // ============================================================================
 // ROTAS: CONTAS (Accounts)
