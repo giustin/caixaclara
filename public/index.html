@@ -669,8 +669,8 @@
     <script type="text/babel">
         const { useState, useCallback, useEffect } = React;
 
-        // Configuration - URL vem do config.js
-        const APPS_SCRIPT_URL = (typeof CAIXACLARA_CONFIG !== 'undefined' && CAIXACLARA_CONFIG.APPS_SCRIPT_URL) || '';
+        // Configuration - URL pode vir do config.js (local) ou do backend (produção via env var)
+        let APPS_SCRIPT_URL = (typeof CAIXACLARA_CONFIG !== 'undefined' && CAIXACLARA_CONFIG.APPS_SCRIPT_URL) || '';
 
         // ============================================================
         // ============================================================
@@ -7857,6 +7857,11 @@
                         const config = await res.json();
                         setAuthConfig(config);
 
+                        // Se o backend tem a URL do Apps Script, usar ela (produção)
+                        if (config.apps_script_url) {
+                            APPS_SCRIPT_URL = config.apps_script_url;
+                        }
+
                         if (!config.auth_enabled) {
                             // Auth desabilitado (dev mode) - acesso livre
                             setUsuario({ email: 'dev@local', nome: 'Dev Mode', foto: null });
@@ -7892,8 +7897,9 @@
                 }
             };
 
-            // Carregar dados reais da planilha ao iniciar
+            // Carregar dados reais da planilha ao iniciar (espera auth terminar)
             useEffect(() => {
+                if (authCarregando) return; // Espera auth resolver primeiro
                 async function carregarDados() {
                     if (!APPS_SCRIPT_URL) return;
                     try {
@@ -8027,7 +8033,7 @@
                     setCarregando(false);
                 }
                 carregarDados();
-            }, []);
+            }, [authCarregando]);
 
             // Se auth ainda carregando, mostrar splash
             if (authCarregando) {

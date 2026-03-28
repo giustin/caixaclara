@@ -102,7 +102,8 @@ app.get('/api/auth/me', authService.authMiddleware, (req, res) => {
 app.get('/api/auth/config', (req, res) => {
   res.json({
     google_client_id: authService.GOOGLE_CLIENT_ID || null,
-    auth_enabled: !!(authService.GOOGLE_CLIENT_ID)
+    auth_enabled: !!(authService.GOOGLE_CLIENT_ID),
+    apps_script_url: process.env.APPS_SCRIPT_URL || null
   });
 });
 
