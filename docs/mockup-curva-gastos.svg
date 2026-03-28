@@ -1,0 +1,192 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 580" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif">
+  <defs>
+    <linearGradient id="sidebar-bg2" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#0f172a"/>
+      <stop offset="100%" stop-color="#1e293b"/>
+    </linearGradient>
+    <linearGradient id="green-fill" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#22c55e" stop-opacity="0.25"/>
+      <stop offset="100%" stop-color="#22c55e" stop-opacity="0.02"/>
+    </linearGradient>
+    <linearGradient id="red-fill" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#ef4444" stop-opacity="0.15"/>
+      <stop offset="100%" stop-color="#ef4444" stop-opacity="0.02"/>
+    </linearGradient>
+    <linearGradient id="proj-fill" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#f59e0b" stop-opacity="0.15"/>
+      <stop offset="100%" stop-color="#f59e0b" stop-opacity="0.02"/>
+    </linearGradient>
+    <filter id="card-shadow2" x="-2%" y="-2%" width="104%" height="108%">
+      <feDropShadow dx="0" dy="2" stdDeviation="6" flood-color="#0f172a" flood-opacity="0.08"/>
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1200" height="580" fill="#f1f5f9"/>
+
+  <!-- Sidebar (abbreviated) -->
+  <rect x="0" y="0" width="220" height="580" fill="url(#sidebar-bg2)"/>
+  <text x="24" y="42" font-size="20" font-weight="700" fill="#93c5fd">💰 CaixaClara</text>
+  <line x1="0" y1="58" x2="220" y2="58" stroke="rgba(255,255,255,0.1)" stroke-width="1"/>
+
+  <!-- Nav - Visão Geral active -->
+  <rect x="0" y="70" width="220" height="38" fill="rgba(59,130,246,0.15)"/>
+  <rect x="0" y="70" width="3" height="38" fill="#3b82f6"/>
+  <text x="44" y="94" font-size="13" font-weight="600" fill="#93c5fd">📊  Visão Geral</text>
+  <text x="44" y="132" font-size="13" fill="#94a3b8">💸  Lançamentos</text>
+  <text x="44" y="166" font-size="13" fill="#94a3b8">🏷️  Categorias</text>
+  <text x="44" y="200" font-size="13" fill="#94a3b8">🏦  Contas</text>
+  <text x="44" y="234" font-size="13" fill="#94a3b8">📈  Reservas</text>
+
+  <!-- Sidebar footer -->
+  <line x1="0" y1="522" x2="220" y2="522" stroke="rgba(255,255,255,0.1)" stroke-width="1"/>
+  <circle cx="36" cy="546" r="12" fill="#3b82f6"/>
+  <text x="36" y="550" font-size="10" font-weight="600" fill="white" text-anchor="middle">T</text>
+  <text x="54" y="544" font-size="11" fill="#cbd5e1">Tiago Giusti</text>
+  <circle cx="24" cy="568" r="4" fill="#22c55e"/>
+  <text x="34" y="572" font-size="10" fill="#64748b">Planilha conectada</text>
+
+  <!-- Main Chart Card -->
+  <rect x="240" y="20" width="940" height="540" rx="12" fill="white" filter="url(#card-shadow2)"/>
+
+  <!-- Chart Title -->
+  <text x="275" y="55" font-size="16" font-weight="700" fill="#0f172a">📈 Curva de Gastos Acumulados</text>
+  <text x="275" y="74" font-size="11" fill="#94a3b8">Acompanhe se os gastos estão dentro do ritmo planejado</text>
+
+  <!-- Category filter pills -->
+  <rect x="275" y="90" width="58" height="26" rx="13" fill="#3b82f6"/>
+  <text x="304" y="107" font-size="10" font-weight="600" fill="white" text-anchor="middle">Todas</text>
+
+  <rect x="340" y="90" width="80" height="26" rx="13" fill="#f1f5f9" stroke="#e2e8f0" stroke-width="1"/>
+  <text x="380" y="107" font-size="10" fill="#64748b" text-anchor="middle">🎓 Educação</text>
+
+  <rect x="427" y="90" width="110" height="26" rx="13" fill="#f1f5f9" stroke="#e2e8f0" stroke-width="1"/>
+  <text x="482" y="107" font-size="10" fill="#64748b" text-anchor="middle">🏡 Financiamento</text>
+
+  <rect x="544" y="90" width="72" height="26" rx="13" fill="#f1f5f9" stroke="#e2e8f0" stroke-width="1"/>
+  <text x="580" y="107" font-size="10" fill="#64748b" text-anchor="middle">🏠 Aluguel</text>
+
+  <rect x="623" y="90" width="95" height="26" rx="13" fill="#f1f5f9" stroke="#e2e8f0" stroke-width="1"/>
+  <text x="670" y="107" font-size="10" fill="#64748b" text-anchor="middle">🛒 Supermercado</text>
+
+  <rect x="725" y="90" width="88" height="26" rx="13" fill="#f1f5f9" stroke="#e2e8f0" stroke-width="1"/>
+  <text x="769" y="107" font-size="10" fill="#64748b" text-anchor="middle">💰 Outras Desp</text>
+
+  <rect x="820" y="90" width="88" height="26" rx="13" fill="#f1f5f9" stroke="#e2e8f0" stroke-width="1"/>
+  <text x="864" y="107" font-size="10" fill="#64748b" text-anchor="middle">🍽️ Restaurantes</text>
+
+  <rect x="915" y="90" width="85" height="26" rx="13" fill="#f1f5f9" stroke="#e2e8f0" stroke-width="1"/>
+  <text x="958" y="107" font-size="10" fill="#64748b" text-anchor="middle">⛽ Combustível</text>
+
+  <!-- Chart area -->
+  <!-- Y axis labels -->
+  <text x="290" y="150" font-size="9" fill="#94a3b8" text-anchor="end">R$ 16k</text>
+  <text x="290" y="210" font-size="9" fill="#94a3b8" text-anchor="end">R$ 12k</text>
+  <text x="290" y="270" font-size="9" fill="#94a3b8" text-anchor="end">R$ 8k</text>
+  <text x="290" y="330" font-size="9" fill="#94a3b8" text-anchor="end">R$ 4k</text>
+  <text x="290" y="390" font-size="9" fill="#94a3b8" text-anchor="end">R$ 0</text>
+
+  <!-- Grid lines -->
+  <line x1="300" y1="147" x2="1140" y2="147" stroke="#f1f5f9" stroke-width="1"/>
+  <line x1="300" y1="207" x2="1140" y2="207" stroke="#f1f5f9" stroke-width="1"/>
+  <line x1="300" y1="267" x2="1140" y2="267" stroke="#f1f5f9" stroke-width="1"/>
+  <line x1="300" y1="327" x2="1140" y2="327" stroke="#f1f5f9" stroke-width="1"/>
+  <line x1="300" y1="387" x2="1140" y2="387" stroke="#f1f5f9" stroke-width="1"/>
+
+  <!-- Budget line (ideal / linear) - dashed -->
+  <line x1="300" y1="387" x2="1140" y2="147" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="6,4" opacity="0.5"/>
+
+  <!-- Budget limit horizontal line -->
+  <line x1="300" y1="147" x2="1140" y2="147" stroke="#ef4444" stroke-width="1" stroke-dasharray="4,3" opacity="0.4"/>
+  <text x="1145" y="151" font-size="9" fill="#ef4444">Teto R$ 15.642</text>
+
+  <!-- Green area fill (under budget) -->
+  <path d="M300,387 L327,385 L354,380 L381,372 L408,365 L435,355 L462,340 L489,328 L516,315 L543,300 L570,288 L597,275 L624,262 L651,250 L678,238 L705,228 L732,218 L759,208 L786,198 L813,190 L840,183 L867,177 L894,172 L921,168 L921,387 Z" fill="url(#green-fill)"/>
+
+  <!-- Actual spending line (green where under budget) -->
+  <polyline points="300,387 327,385 354,380 381,372 408,365 435,355 462,340 489,328 516,315 543,300 570,288 597,275 624,262 651,250 678,238 705,228 732,218 759,208 786,198 813,190 840,183 867,177 894,172 921,168"
+    fill="none" stroke="#22c55e" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- Red segment (over budget on specific days) -->
+  <polyline points="894,172 921,168"
+    fill="none" stroke="#ef4444" stroke-width="2.5" stroke-linecap="round"/>
+
+  <!-- Projected spending (dashed yellow) -->
+  <path d="M921,168 L948,165 L975,163 L1002,161 L1050,158" fill="url(#proj-fill)" stroke="none"/>
+  <polyline points="921,168 948,165 975,163 1002,161 1050,158"
+    fill="none" stroke="#f59e0b" stroke-width="2" stroke-dasharray="6,4" stroke-linecap="round"/>
+
+  <!-- Data points on actual line -->
+  <circle cx="300" cy="387" r="3" fill="#22c55e"/>
+  <circle cx="381" cy="372" r="3" fill="#22c55e"/>
+  <circle cx="462" cy="340" r="3" fill="#22c55e"/>
+  <circle cx="543" cy="300" r="3" fill="#22c55e"/>
+  <circle cx="624" cy="262" r="3" fill="#22c55e"/>
+  <circle cx="705" cy="228" r="3" fill="#22c55e"/>
+  <circle cx="786" cy="198" r="3" fill="#22c55e"/>
+  <circle cx="867" cy="177" r="3" fill="#22c55e"/>
+  <circle cx="921" cy="168" r="4" fill="#ef4444" stroke="white" stroke-width="2"/>
+
+  <!-- Projected points -->
+  <circle cx="948" cy="165" r="3" fill="none" stroke="#f59e0b" stroke-width="1.5" stroke-dasharray="2,2"/>
+  <circle cx="1002" cy="161" r="3" fill="none" stroke="#f59e0b" stroke-width="1.5" stroke-dasharray="2,2"/>
+  <circle cx="1050" cy="158" r="3" fill="none" stroke="#f59e0b" stroke-width="1.5" stroke-dasharray="2,2"/>
+
+  <!-- X axis day labels -->
+  <text x="300" y="405" font-size="8" fill="#94a3b8" text-anchor="middle">01</text>
+  <text x="354" y="405" font-size="8" fill="#94a3b8" text-anchor="middle">03</text>
+  <text x="435" y="405" font-size="8" fill="#94a3b8" text-anchor="middle">06</text>
+  <text x="516" y="405" font-size="8" fill="#94a3b8" text-anchor="middle">09</text>
+  <text x="597" y="405" font-size="8" fill="#94a3b8" text-anchor="middle">12</text>
+  <text x="678" y="405" font-size="8" fill="#94a3b8" text-anchor="middle">15</text>
+  <text x="759" y="405" font-size="8" fill="#94a3b8" text-anchor="middle">18</text>
+  <text x="840" y="405" font-size="8" fill="#94a3b8" text-anchor="middle">21</text>
+  <text x="921" y="405" font-size="8" fill="#94a3b8" text-anchor="middle">24</text>
+  <text x="1002" y="405" font-size="8" fill="#94a3b8" text-anchor="middle">27</text>
+  <text x="1050" y="405" font-size="8" fill="#94a3b8" text-anchor="middle">31</text>
+
+  <!-- Today marker -->
+  <line x1="921" y1="135" x2="921" y2="395" stroke="#3b82f6" stroke-width="1" stroke-dasharray="3,3" opacity="0.5"/>
+  <rect x="900" y="126" width="42" height="16" rx="4" fill="#3b82f6"/>
+  <text x="921" y="137" font-size="8" font-weight="600" fill="white" text-anchor="middle">Hoje</text>
+
+  <!-- Tooltip on last real point -->
+  <rect x="835" y="136" width="145" height="56" rx="8" fill="#1e293b" opacity="0.95"/>
+  <text x="850" y="154" font-size="10" font-weight="600" fill="white">Dia 24/03 (Seg)</text>
+  <text x="850" y="170" font-size="9" fill="#94a3b8">Gasto: R$ 14.960,83</text>
+  <text x="850" y="184" font-size="9" fill="#f59e0b">Ideal: R$ 12.107,61</text>
+
+  <!-- Legend -->
+  <rect x="275" y="425" width="900" height="50" rx="8" fill="#f8fafc"/>
+
+  <line x1="300" y1="450" x2="330" y2="450" stroke="#22c55e" stroke-width="2.5"/>
+  <circle cx="315" cy="450" r="3" fill="#22c55e"/>
+  <text x="338" y="454" font-size="10" fill="#64748b">Gasto acumulado</text>
+
+  <line x1="450" y1="450" x2="480" y2="450" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="6,4"/>
+  <text x="488" y="454" font-size="10" fill="#64748b">Ritmo ideal (linear)</text>
+
+  <line x1="620" y1="450" x2="650" y2="450" stroke="#ef4444" stroke-width="2"/>
+  <text x="658" y="454" font-size="10" fill="#64748b">Acima do teto</text>
+
+  <line x1="760" y1="450" x2="790" y2="450" stroke="#f59e0b" stroke-width="2" stroke-dasharray="6,4"/>
+  <circle cx="775" cy="450" r="3" fill="none" stroke="#f59e0b" stroke-width="1.5"/>
+  <text x="798" y="454" font-size="10" fill="#64748b">Projeção até fim do mês</text>
+
+  <!-- Summary stats at bottom -->
+  <rect x="275" y="485" width="210" height="60" rx="8" fill="white" stroke="#e2e8f0" stroke-width="1"/>
+  <text x="295" y="508" font-size="10" fill="#94a3b8">Gasto até hoje</text>
+  <text x="295" y="530" font-size="18" font-weight="700" fill="#0f172a">R$ 14.960,83</text>
+
+  <rect x="500" y="485" width="210" height="60" rx="8" fill="white" stroke="#e2e8f0" stroke-width="1"/>
+  <text x="520" y="508" font-size="10" fill="#94a3b8">Teto do mês</text>
+  <text x="520" y="530" font-size="18" font-weight="700" fill="#64748b">R$ 15.642,00</text>
+
+  <rect x="725" y="485" width="210" height="60" rx="8" fill="white" stroke="#e2e8f0" stroke-width="1"/>
+  <text x="745" y="508" font-size="10" fill="#94a3b8">Disponível restante</text>
+  <text x="745" y="530" font-size="18" font-weight="700" fill="#16a34a">R$ 681,17</text>
+
+  <rect x="950" y="485" width="210" height="60" rx="8" fill="white" stroke="#e2e8f0" stroke-width="1"/>
+  <text x="970" y="508" font-size="10" fill="#94a3b8">Projeção fim do mês</text>
+  <text x="970" y="530" font-size="18" font-weight="700" fill="#f59e0b">R$ 15.820,00</text>
+</svg>

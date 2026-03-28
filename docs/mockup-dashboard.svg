@@ -1,0 +1,200 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 750" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif">
+  <defs>
+    <linearGradient id="sidebar-bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#0f172a"/>
+      <stop offset="100%" stop-color="#1e293b"/>
+    </linearGradient>
+    <linearGradient id="green-bar" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#22c55e"/>
+      <stop offset="100%" stop-color="#16a34a"/>
+    </linearGradient>
+    <linearGradient id="red-bar" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#ef4444"/>
+      <stop offset="100%" stop-color="#dc2626"/>
+    </linearGradient>
+    <linearGradient id="blue-bar" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#3b82f6"/>
+      <stop offset="100%" stop-color="#2563eb"/>
+    </linearGradient>
+    <linearGradient id="yellow-bar" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#f59e0b"/>
+      <stop offset="100%" stop-color="#d97706"/>
+    </linearGradient>
+    <filter id="card-shadow" x="-2%" y="-2%" width="104%" height="108%">
+      <feDropShadow dx="0" dy="2" stdDeviation="6" flood-color="#0f172a" flood-opacity="0.08"/>
+    </filter>
+    <clipPath id="rounded-main">
+      <rect x="220" y="0" width="980" height="750" rx="0"/>
+    </clipPath>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1200" height="750" fill="#f1f5f9"/>
+
+  <!-- Sidebar -->
+  <rect x="0" y="0" width="220" height="750" fill="url(#sidebar-bg)"/>
+
+  <!-- Logo -->
+  <text x="24" y="42" font-size="20" font-weight="700" fill="#93c5fd">💰 CaixaClara</text>
+  <line x1="0" y1="58" x2="220" y2="58" stroke="rgba(255,255,255,0.1)" stroke-width="1"/>
+
+  <!-- Nav items -->
+  <rect x="0" y="70" width="220" height="38" fill="rgba(59,130,246,0.15)"/>
+  <rect x="0" y="70" width="3" height="38" fill="#3b82f6"/>
+  <text x="44" y="94" font-size="13" font-weight="600" fill="#93c5fd">📊  Visão Geral</text>
+
+  <text x="44" y="132" font-size="13" fill="#94a3b8">💸  Lançamentos</text>
+  <text x="44" y="166" font-size="13" fill="#94a3b8">🏷️  Categorias</text>
+  <text x="44" y="200" font-size="13" fill="#94a3b8">🏦  Contas</text>
+  <text x="44" y="234" font-size="13" fill="#94a3b8">📈  Reservas</text>
+  <text x="44" y="268" font-size="13" fill="#94a3b8">🎯  Planejamento</text>
+  <text x="44" y="302" font-size="13" fill="#94a3b8">📋  Relatórios</text>
+  <text x="44" y="336" font-size="13" fill="#94a3b8">📥  Importar</text>
+  <text x="44" y="370" font-size="13" fill="#94a3b8">⚙️  Configurar</text>
+
+  <!-- Sidebar footer -->
+  <line x1="0" y1="690" x2="220" y2="690" stroke="rgba(255,255,255,0.1)" stroke-width="1"/>
+  <circle cx="36" cy="714" r="12" fill="#3b82f6"/>
+  <text x="36" y="718" font-size="10" font-weight="600" fill="white" text-anchor="middle">T</text>
+  <text x="54" y="712" font-size="11" fill="#cbd5e1">Tiago Giusti</text>
+  <rect x="164" y="702" width="36" height="22" rx="4" fill="none" stroke="rgba(255,255,255,0.15)" stroke-width="1"/>
+  <text x="182" y="717" font-size="9" fill="#94a3b8" text-anchor="middle">Sair</text>
+  <circle cx="24" cy="736" r="4" fill="#22c55e"/>
+  <text x="34" y="740" font-size="10" fill="#64748b">Planilha conectada</text>
+
+  <!-- Main content area -->
+  <g clip-path="url(#rounded-main)">
+    <!-- Header -->
+    <text x="250" y="42" font-size="22" font-weight="700" fill="#0f172a">Visão Geral</text>
+    <text x="250" y="62" font-size="12" fill="#94a3b8">Resumo financeiro</text>
+
+    <!-- Month selector -->
+    <rect x="1040" y="18" width="140" height="36" rx="8" fill="white" stroke="#e2e8f0" stroke-width="1" filter="url(#card-shadow)"/>
+    <text x="1062" y="40" font-size="11" fill="#64748b">◀</text>
+    <text x="1110" y="41" font-size="12" font-weight="600" fill="#0f172a" text-anchor="middle">Mar 2026</text>
+    <text x="1158" y="40" font-size="11" fill="#64748b">▶</text>
+
+    <!-- Alert banners -->
+    <rect x="250" y="80" width="260" height="44" rx="8" fill="#fef2f2" stroke="#fecaca" stroke-width="1"/>
+    <text x="264" y="100" font-size="10" font-weight="600" fill="#dc2626">🏠 Aluguel: 96% do orçamento</text>
+    <text x="264" y="115" font-size="9" fill="#94a3b8">(R$ 1.920,65/R$ 2.000,00)</text>
+
+    <rect x="520" y="80" width="260" height="44" rx="8" fill="#fef2f2" stroke="#fecaca" stroke-width="1"/>
+    <text x="534" y="100" font-size="10" font-weight="600" fill="#dc2626">🎓 Educação estourou! R$ 4.058</text>
+    <text x="534" y="115" font-size="9" fill="#94a3b8">de R$ 3.972,00 (102%)</text>
+
+    <rect x="790" y="80" width="260" height="44" rx="8" fill="#fef2f2" stroke="#fecaca" stroke-width="1"/>
+    <text x="804" y="100" font-size="10" font-weight="600" fill="#dc2626">💡 Energia estourou! R$ 413,55</text>
+    <text x="804" y="115" font-size="9" fill="#94a3b8">de R$ 200,00 (207%)</text>
+
+    <!-- KPI Cards -->
+    <rect x="250" y="140" width="220" height="80" rx="10" fill="white" filter="url(#card-shadow)"/>
+    <text x="270" y="164" font-size="11" fill="#94a3b8">Disponível hoje</text>
+    <text x="270" y="195" font-size="24" font-weight="700" fill="#0f172a">R$ 64,04</text>
+    <text x="270" y="212" font-size="10" fill="#94a3b8">Contas de pagamento</text>
+
+    <rect x="485" y="140" width="220" height="80" rx="10" fill="white" filter="url(#card-shadow)"/>
+    <text x="505" y="164" font-size="11" fill="#94a3b8">Patrimônio total</text>
+    <text x="505" y="195" font-size="24" font-weight="700" fill="#0f172a">R$ 4.300,75</text>
+    <text x="505" y="212" font-size="10" fill="#94a3b8">Contas + Investimentos</text>
+
+    <rect x="720" y="140" width="220" height="80" rx="10" fill="white" filter="url(#card-shadow)"/>
+    <text x="740" y="164" font-size="11" fill="#94a3b8">Saldo do mês</text>
+    <text x="740" y="195" font-size="24" font-weight="700" fill="#16a34a">+R$ 4.285,26</text>
+    <text x="740" y="212" font-size="10" fill="#94a3b8">Receitas - Despesas</text>
+
+    <rect x="955" y="140" width="220" height="80" rx="10" fill="white" filter="url(#card-shadow)"/>
+    <text x="975" y="164" font-size="11" fill="#94a3b8">Orçamento usado</text>
+    <text x="975" y="195" font-size="24" font-weight="700" fill="#dc2626">96%</text>
+    <rect x="975" y="204" width="180" height="6" rx="3" fill="#fee2e2"/>
+    <rect x="975" y="204" width="173" height="6" rx="3" fill="url(#red-bar)"/>
+
+    <!-- Top Categorias -->
+    <rect x="250" y="240" width="470" height="310" rx="10" fill="white" filter="url(#card-shadow)"/>
+    <text x="275" y="270" font-size="14" font-weight="600" fill="#0f172a">Top Categorias do Mês</text>
+
+    <!-- Category bars -->
+    <text x="275" y="303" font-size="11" fill="#64748b">🎓 Educação</text>
+    <rect x="375" y="291" width="260" height="16" rx="4" fill="#fee2e2"/>
+    <rect x="375" y="291" width="258" height="16" rx="4" fill="url(#red-bar)"/>
+    <text x="643" y="303" font-size="10" font-weight="600" fill="#dc2626">102%</text>
+    <text x="695" y="303" font-size="11" fill="#334155">R$ 4.058</text>
+
+    <text x="275" y="333" font-size="11" fill="#64748b">🏡 Financiam...</text>
+    <rect x="375" y="321" width="260" height="16" rx="4" fill="#dbeafe"/>
+    <rect x="375" y="321" width="155" height="16" rx="4" fill="url(#blue-bar)"/>
+    <text x="695" y="333" font-size="11" fill="#334155">R$ 2.311</text>
+
+    <text x="275" y="363" font-size="11" fill="#64748b">🏠 Aluguel</text>
+    <rect x="375" y="351" width="260" height="16" rx="4" fill="#fee2e2"/>
+    <rect x="375" y="351" width="125" height="16" rx="4" fill="url(#red-bar)"/>
+    <text x="508" y="363" font-size="10" font-weight="600" fill="#dc2626">96%</text>
+    <text x="695" y="363" font-size="11" fill="#334155">R$ 1.920</text>
+
+    <text x="275" y="393" font-size="11" fill="#64748b">🛒 Supermercado</text>
+    <rect x="375" y="381" width="260" height="16" rx="4" fill="#dcfce7"/>
+    <rect x="375" y="381" width="110" height="16" rx="4" fill="url(#green-bar)"/>
+    <text x="695" y="393" font-size="11" fill="#334155">R$ 1.689</text>
+
+    <text x="275" y="423" font-size="11" fill="#64748b">💰 Outras Desp.</text>
+    <rect x="375" y="411" width="260" height="16" rx="4" fill="#dbeafe"/>
+    <rect x="375" y="411" width="105" height="16" rx="4" fill="url(#blue-bar)"/>
+    <text x="695" y="423" font-size="11" fill="#334155">R$ 1.622</text>
+
+    <text x="275" y="453" font-size="11" fill="#64748b">🍽️ Restaurantes</text>
+    <rect x="375" y="441" width="260" height="16" rx="4" fill="#fef3c7"/>
+    <rect x="375" y="441" width="65" height="16" rx="4" fill="url(#yellow-bar)"/>
+    <text x="695" y="453" font-size="11" fill="#334155">R$ 935</text>
+
+    <text x="275" y="483" font-size="11" fill="#64748b">⛽ Combustível</text>
+    <rect x="375" y="471" width="260" height="16" rx="4" fill="#dcfce7"/>
+    <rect x="375" y="471" width="50" height="16" rx="4" fill="url(#green-bar)"/>
+    <text x="695" y="483" font-size="11" fill="#334155">R$ 751</text>
+
+    <text x="275" y="513" font-size="11" fill="#64748b">🐾 Pet</text>
+    <rect x="375" y="501" width="260" height="16" rx="4" fill="#fef3c7"/>
+    <rect x="375" y="501" width="44" height="16" rx="4" fill="url(#yellow-bar)"/>
+    <text x="695" y="513" font-size="11" fill="#334155">R$ 652</text>
+
+    <text x="400" y="540" font-size="10" fill="#94a3b8" font-style="italic">+12 categorias com menor gasto</text>
+
+    <!-- Saúde do Orçamento -->
+    <rect x="735" y="240" width="440" height="310" rx="10" fill="white" filter="url(#card-shadow)"/>
+    <text x="760" y="270" font-size="14" font-weight="600" fill="#0f172a">Saúde do Orçamento</text>
+
+    <rect x="760" y="286" width="190" height="60" rx="8" fill="#f8fafc"/>
+    <text x="775" y="306" font-size="10" fill="#94a3b8">Dia 27 de 31</text>
+    <text x="775" y="330" font-size="20" font-weight="700" fill="#0f172a">87% do mês</text>
+
+    <rect x="960" y="286" width="190" height="60" rx="8" fill="#f0fdf4"/>
+    <text x="975" y="306" font-size="10" fill="#94a3b8">Ainda pode gastar</text>
+    <text x="975" y="330" font-size="20" font-weight="700" fill="#16a34a">R$ 681,17</text>
+
+    <rect x="760" y="356" width="190" height="60" rx="8" fill="#f8fafc"/>
+    <text x="775" y="376" font-size="10" fill="#94a3b8">Média/dia restante</text>
+    <text x="775" y="400" font-size="20" font-weight="700" fill="#0f172a">R$ 170,29</text>
+
+    <rect x="960" y="356" width="190" height="60" rx="8" fill="#f0fdf4"/>
+    <text x="975" y="376" font-size="10" fill="#94a3b8">vs mês anterior</text>
+    <text x="975" y="400" font-size="20" font-weight="700" fill="#16a34a">+R$ 14.900</text>
+
+    <!-- Categorias em atenção -->
+    <text x="760" y="440" font-size="11" font-weight="700" fill="#64748b" letter-spacing="0.5">CATEGORIAS EM ATENÇÃO</text>
+
+    <text x="760" y="465" font-size="11" fill="#334155">💡 Energia</text>
+    <text x="1100" y="465" font-size="12" font-weight="700" fill="#dc2626" text-anchor="end">207%</text>
+    <rect x="1105" y="455" width="50" height="12" rx="3" fill="url(#red-bar)"/>
+
+    <text x="760" y="490" font-size="11" fill="#334155">🎓 Educação</text>
+    <text x="1100" y="490" font-size="12" font-weight="700" fill="#dc2626" text-anchor="end">102%</text>
+    <rect x="1105" y="480" width="48" height="12" rx="3" fill="url(#red-bar)"/>
+
+    <text x="760" y="515" font-size="11" fill="#334155">🏠 Aluguel</text>
+    <text x="1100" y="515" font-size="12" font-weight="700" fill="#dc2626" text-anchor="end">96%</text>
+    <rect x="1105" y="505" width="46" height="12" rx="3" fill="url(#red-bar)"/>
+
+    <text x="760" y="540" font-size="11" fill="#334155">🛒 Supermercado</text>
+    <text x="1100" y="540" font-size="12" font-weight="700" fill="#334155" text-anchor="end">73%</text>
+    <rect x="1105" y="530" width="35" height="12" rx="3" fill="#3b82f6"/>
+  </g>
+</svg>
