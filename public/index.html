@@ -4133,6 +4133,7 @@
             const [vinculosInvestimento, setVinculosInvestimento] = useState({}); // { indice: conta_id }
             const [saldosReservas, setSaldosReservas] = useState([]); // cache de saldos_historico para detectar duplicatas
             const [splitModal, setSplitModal] = useState(null); // { linhaIdx, original:{valor,descricao,categoria_id,tipo}, partes:[{valor,categoria_id,reembolsavel,descricao,tocadaManualmente}] }
+            const [regrasSplit, setRegrasSplit] = useState([]); // regras de split aprendidas pelo usuário
             const fileRef = React.createRef();
 
             // Cartões disponíveis
@@ -4160,14 +4161,106 @@
                 carregarRegras();
             }, []);
 
+            // Carregar regras de split (aprendizado automático de divisões recorrentes)
+            useEffect(() => {
+                async function carregarRegrasSplit() {
+                    const rs = await api.get('regras_split');
+                    if (rs && Array.isArray(rs)) setRegrasSplit(rs);
+                }
+                carregarRegrasSplit();
+            }, []);
+
+            // Aplica regras de split salvas sobre as linhas da preview recém-carregada.
+            // Retorna null se nada mudou; caso contrário { linhas, classificacoes, reembolsaveis, totalAutoSplits }.
+            const expandirComRegrasSplit = (linhasRaw, regras) => {
+                if (!linhasRaw || !Array.isArray(regras) || regras.length === 0) return null;
+                const encontrarRegra = (descricao) => {
+                    if (!descricao) return null;
+                    const descUp = String(descricao).toUpperCase();
+                    return regras.find(r => {
+                        const p = String(r.padrao_texto || '').toUpperCase();
+                        return p.length >= 4 && descUp.startsWith(p);
+                    });
+                };
+                const linhasOut = [];
+                const classifOut = {};
+                const reembOut = {};
+                let totalAutoSplits = 0;
+                linhasRaw.forEach((linha) => {
+                    if (linha.origemSplit || (linha.tipo !== 'despesa' && linha.tipo !== 'receita')) {
+                        linhasOut.push(linha);
+                        return;
+                    }
+                    const regra = encontrarRegra(linha.descricao);
+                    if (!regra) { linhasOut.push(linha); return; }
+                    let partes;
+                    try { partes = JSON.parse(regra.partes_json); } catch { partes = null; }
+                    if (!Array.isArray(partes) || partes.length < 2) { linhasOut.push(linha); return; }
+                    const valorTotal = Number(linha.valor) || 0;
+                    if (!(valorTotal > 0)) { linhasOut.push(linha); return; }
+                    // Computa valores por parte arredondados; ajusta a última para garantir soma exata
+                    let somaParciais = 0;
+                    const valores = partes.map((p, i) => {
+                        if (i === partes.length - 1) return null;
+                        const v = Math.round(valorTotal * (Number(p.pct) || 0) * 100) / 100;
+                        somaParciais += v;
+                        return v;
+                    });
+                    valores[valores.length - 1] = Math.round((valorTotal - somaParciais) * 100) / 100;
+                    const startIdx = linhasOut.length;
+                    partes.forEach((p, n) => {
+                        linhasOut.push({
+                            ...linha,
+                            descricao: `${linha.descricao} (parte ${n + 1})`,
+                            valor: valores[n],
+                            identificador: linha.identificador || null,
+                            origemSplit: true,
+                            origemSplitAuto: true,
+                            origemSplitIndex: n + 1,
+                            origemSplitTotal: partes.length,
+                            regraSplitId: regra.id,
+                        });
+                        const novoIdx = startIdx + n;
+                        classifOut[novoIdx] = {
+                            categoria_id: p.categoria_id || '',
+                            confianca: p.categoria_id ? 'alta' : 'baixa',
+                            metodo: 'regra_split',
+                        };
+                        reembOut[novoIdx] = !!p.reembolsavel;
+                    });
+                    totalAutoSplits++;
+                });
+                return { linhas: linhasOut, classificacoes: classifOut, reembolsaveis: reembOut, totalAutoSplits };
+            };
+
+            // Aplica automaticamente as regras de split quando o preview é carregado pela primeira vez.
+            // Usa a flag preview.regrasAutoAplicadas como gate — classificação aguarda isto rodar.
+            useEffect(() => {
+                if (!preview || preview.regrasAutoAplicadas) return;
+                if (regrasSplit.length === 0) {
+                    // sem regras salvas — marca como aplicado (nada a fazer) pra liberar classificação
+                    setPreview(prev => prev ? { ...prev, regrasAutoAplicadas: true } : prev);
+                    return;
+                }
+                const res = expandirComRegrasSplit(preview.linhas, regrasSplit);
+                if (!res || res.totalAutoSplits === 0) {
+                    setPreview(prev => prev ? { ...prev, regrasAutoAplicadas: true } : prev);
+                    return;
+                }
+                setPreview(prev => prev ? { ...prev, linhas: res.linhas, regrasAutoAplicadas: true, totalAutoSplits: res.totalAutoSplits } : prev);
+                setClassificacoes(prev => ({ ...prev, ...res.classificacoes }));
+                setReembolsaveis(prev => ({ ...prev, ...res.reembolsaveis }));
+            }, [preview, regrasSplit]);
+
             // Classificar lançamentos quando preview, regras ou categorias mudam
             useEffect(() => {
                 if (!preview) return;
+                if (!preview.regrasAutoAplicadas) return; // aguardar effect de auto-split de regras rodar primeiro
                 if (!data.categorias || data.categorias.length === 0) return; // esperar categorias carregarem
                 const novasClass = {};
                 preview.linhas.forEach((l, i) => {
-                    // Manter classificações manuais do usuário
-                    if (classificacoes[i]?.metodo === 'manual') {
+                    // Manter classificações manuais ou vindas de regra de split
+                    if (classificacoes[i]?.metodo === 'manual' || classificacoes[i]?.metodo === 'regra_split') {
                         novasClass[i] = classificacoes[i];
                         return;
                     }
@@ -5780,17 +5873,96 @@
             };
 
             // ===== Split de lançamentos na preview =====
+            // Normaliza descrição em padrão para matching de regras (primeiras 3 palavras alfanuméricas)
+            const gerarPadraoSplit = (descricao) => {
+                if (!descricao) return '';
+                const palavras = String(descricao).toUpperCase()
+                    .replace(/\([^)]*\)/g, '')
+                    .replace(/[^A-Z0-9\s]/g, ' ')
+                    .split(/\s+/)
+                    .filter(p => p.length >= 3 && !/^\d+$/.test(p));
+                return palavras.slice(0, 3).join(' ').trim();
+            };
+
+            // Remove sufixos "(parte N)" eventualmente adicionados pelo auto-split
+            const limparSufixoParte = (descricao) =>
+                String(descricao || '').replace(/\s*\(parte\s+\d+\)(\s*💼)?\s*$/i, '').trim();
+
             const abrirSplit = (linhaIdx) => {
                 const linha = preview.linhas[linhaIdx];
+                // Se a linha já é fruto de um split (manual ou auto), reabrir o grupo completo
+                if (linha.origemSplit && linha.origemSplitTotal) {
+                    const startIdx = linhaIdx - ((linha.origemSplitIndex || 1) - 1);
+                    const total = linha.origemSplitTotal;
+                    const descricaoBase = limparSufixoParte(linha.descricao);
+                    let valorTotal = 0;
+                    const partesAtuais = [];
+                    for (let k = 0; k < total; k++) {
+                        const lk = preview.linhas[startIdx + k];
+                        if (!lk || !lk.origemSplit) break;
+                        valorTotal += Number(lk.valor) || 0;
+                        partesAtuais.push({
+                            valor: Number(lk.valor) || 0,
+                            categoria_id: classificacoes[startIdx + k]?.categoria_id || '',
+                            reembolsavel: !!reembolsaveis[startIdx + k],
+                            descricao: lk.descricao,
+                            tocadaManualmente: true,
+                        });
+                    }
+                    setSplitModal({
+                        linhaIdx: startIdx,
+                        grupoTotal: partesAtuais.length,
+                        regraSplitId: linha.regraSplitId || null,
+                        original: { valor: valorTotal, descricao: descricaoBase, categoria_id: partesAtuais[0]?.categoria_id || '', tipo: linha.tipo },
+                        partes: partesAtuais,
+                    });
+                    return;
+                }
+
                 const categoriaAtual = classificacoes[linhaIdx]?.categoria_id || '';
                 setSplitModal({
                     linhaIdx,
+                    grupoTotal: 1,
+                    regraSplitId: null,
                     original: { valor: linha.valor, descricao: linha.descricao, categoria_id: categoriaAtual, tipo: linha.tipo },
                     partes: [
                         { valor: linha.valor, categoria_id: categoriaAtual, reembolsavel: false, descricao: linha.descricao + ' (parte 1)', tocadaManualmente: false },
                         { valor: 0, categoria_id: categoriaAtual, reembolsavel: true, descricao: linha.descricao + ' (parte 2)', tocadaManualmente: false },
                     ],
                 });
+            };
+
+            // Salva ou atualiza a regra de split a partir do split confirmado (aprende/reaprende a proporção)
+            const salvarOuAtualizarRegraSplit = async (descricaoOriginal, partes, valorTotal, regraExistenteId) => {
+                if (!descricaoOriginal || !partes || partes.length < 2 || !(valorTotal > 0)) return;
+                const padrao = gerarPadraoSplit(descricaoOriginal);
+                if (!padrao || padrao.length < 4) return; // evitar padrões inúteis (ex: "PIX")
+                const partesComPct = partes.map(p => ({
+                    pct: Math.round(((Number(p.valor) || 0) / valorTotal) * 10000) / 10000,
+                    categoria_id: p.categoria_id || '',
+                    reembolsavel: !!p.reembolsavel,
+                }));
+                const regraExistente = regraExistenteId
+                    ? regrasSplit.find(r => r.id === regraExistenteId)
+                    : regrasSplit.find(r => String(r.padrao_texto || '').toUpperCase() === padrao);
+                const agora = new Date().toISOString();
+                const regra = {
+                    id: regraExistente?.id || ('RS_' + Date.now() + '_' + Math.floor(Math.random() * 1000)),
+                    padrao_texto: padrao,
+                    partes_json: JSON.stringify(partesComPct),
+                    vezes_usada: (Number(regraExistente?.vezes_usada) || 0) + 1,
+                    criada_em: regraExistente?.criada_em || agora,
+                    atualizada_em: agora,
+                };
+                try {
+                    await api.post('salvar_regra_split', regra);
+                    setRegrasSplit(prev => {
+                        const outros = prev.filter(r => r.id !== regra.id);
+                        return [...outros, regra];
+                    });
+                } catch (e) {
+                    console.warn('Erro ao salvar regra de split (não crítico):', e);
+                }
             };
 
             const atualizarParte = (idx, campo, valor) => {
@@ -5834,36 +6006,37 @@
 
             const confirmarSplit = () => {
                 if (!splitModal) return;
-                const { linhaIdx, partes, original } = splitModal;
+                const { linhaIdx, partes, original, grupoTotal = 1, regraSplitId = null } = splitModal;
                 const linhaOrig = preview.linhas[linhaIdx];
+                const descricaoBase = original.descricao || linhaOrig.descricao;
 
                 // Todas as partes mantêm o MESMO identificador do original — assim o re-import
-                // do mesmo extrato no mês seguinte é detectado pela dedup por UUID
-                // (identificadoresExistentes.has(...)). Se tivéssemos sufixos -split-N, nenhuma
-                // linha salva bateria com o identificador original e ele reentraria como novo.
+                // do mesmo extrato no mês seguinte é detectado pela dedup por UUID.
                 const novasLinhas = partes.map((p, n) => ({
                     ...linhaOrig,
-                    descricao: (p.descricao && p.descricao.trim()) ? p.descricao : `${linhaOrig.descricao} (parte ${n + 1})`,
+                    descricao: (p.descricao && p.descricao.trim()) ? p.descricao : `${descricaoBase} (parte ${n + 1})`,
                     valor: Number(p.valor) || 0,
                     identificador: linhaOrig.identificador || null,
                     origemSplit: true,
+                    origemSplitAuto: false, // edição manual — deixa de ser puro auto
                     origemSplitIndex: n + 1,
                     origemSplitTotal: partes.length,
+                    regraSplitId: regraSplitId || undefined,
                 }));
 
                 const novoArray = [
                     ...preview.linhas.slice(0, linhaIdx),
                     ...novasLinhas,
-                    ...preview.linhas.slice(linhaIdx + 1),
+                    ...preview.linhas.slice(linhaIdx + grupoTotal),
                 ];
 
-                const offset = partes.length - 1; // quantas linhas extras foram inseridas
+                const offset = partes.length - grupoTotal; // delta no tamanho do array
                 const reindex = (obj) => {
                     const novo = {};
                     Object.entries(obj).forEach(([k, v]) => {
                         const i = parseInt(k, 10);
                         if (i < linhaIdx) novo[i] = v;
-                        else if (i > linhaIdx) novo[i + offset] = v;
+                        else if (i >= linhaIdx + grupoTotal) novo[i + offset] = v;
                     });
                     return novo;
                 };
@@ -5887,6 +6060,9 @@
                 setReembolsaveis(novosReemb);
                 setVinculosInvestimento(novosVinc);
                 setSplitModal(null);
+
+                // Aprende ou re-aprende a regra (pct por parte) em background
+                salvarOuAtualizarRegraSplit(descricaoBase, partes, Number(original.valor) || 0, regraSplitId);
             };
 
             return (
@@ -6180,6 +6356,14 @@
                                 );
                             })()}
 
+                            {/* Aviso de auto-split por regra aprendida */}
+                            {preview.totalAutoSplits > 0 && (
+                                <div style={{ padding: '0.6rem 0.9rem', background: '#fff7ed', border: '1px solid #fed7aa', borderRadius: '8px', marginBottom: '0.75rem', fontSize: '0.82rem', color: '#9a3412', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                    <span style={{ fontWeight: '700' }}>⎇ {preview.totalAutoSplits}</span>
+                                    <span>lançamento{preview.totalAutoSplits > 1 ? 's' : ''} dividido{preview.totalAutoSplits > 1 ? 's' : ''} automaticamente por regra{preview.totalAutoSplits > 1 ? 's' : ''} aprendida{preview.totalAutoSplits > 1 ? 's' : ''}. Clique no botão ⎇ Dividir da linha pra revisar ou ajustar.</span>
+                                </div>
+                            )}
+
                             {/* Tabela completa */}
                             <div style={{ maxHeight: '600px', overflow: 'auto' }}>
                                 <table className="table">
@@ -6192,7 +6376,22 @@
                                                 <td style={{ fontSize: '0.8rem' }}>{formatDate(l.data)}</td>
                                                 <td style={{ fontSize: '0.85rem' }}>
                                                     {duplicadas[i] && <span style={{ background: '#fbbf24', color: '#78350f', fontSize: '0.6rem', fontWeight: '700', padding: '0.1rem 0.35rem', borderRadius: '3px', marginRight: '0.4rem', textDecoration: 'none', display: 'inline-block' }}>DUPLICADO</span>}
-                                                    {l.origemSplit && <span title={`Parte ${l.origemSplitIndex}/${l.origemSplitTotal} de um split`} style={{ background: '#ede9fe', color: '#6d28d9', fontSize: '0.6rem', fontWeight: '700', padding: '0.1rem 0.35rem', borderRadius: '3px', marginRight: '0.4rem', textDecoration: 'none', display: 'inline-block' }}>⎇ split {l.origemSplitIndex}/{l.origemSplitTotal}</span>}
+                                                    {l.origemSplit && (
+                                                        <span
+                                                            title={l.origemSplitAuto
+                                                                ? `Parte ${l.origemSplitIndex}/${l.origemSplitTotal} — aplicada automaticamente por regra aprendida`
+                                                                : `Parte ${l.origemSplitIndex}/${l.origemSplitTotal} de um split manual`}
+                                                            style={{
+                                                                background: l.origemSplitAuto ? '#ffedd5' : '#ede9fe',
+                                                                color: l.origemSplitAuto ? '#9a3412' : '#6d28d9',
+                                                                fontSize: '0.6rem', fontWeight: '700',
+                                                                padding: '0.1rem 0.35rem', borderRadius: '3px',
+                                                                marginRight: '0.4rem', display: 'inline-block',
+                                                            }}
+                                                        >
+                                                            ⎇ split{l.origemSplitAuto ? ' auto' : ''} {l.origemSplitIndex}/{l.origemSplitTotal}
+                                                        </span>
+                                                    )}
                                                     {l.descricao}
                                                     {(l.tipo === 'despesa' || l.tipo === 'receita') && !duplicadas[i] && (
                                                         <button
