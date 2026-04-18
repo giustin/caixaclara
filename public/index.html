@@ -1510,6 +1510,13 @@
                 if (!lanc.id) lanc.id = 'L' + Date.now();
                 if (!lanc.tipo) lanc.tipo = 'despesa';
                 if (!lanc.data) lanc.data = new Date().toISOString().slice(0, 10);
+                if (lanc.tipo === 'transferencia_interna') {
+                    lanc.categoria_id = '';
+                    lanc.categoria = 'transferencia';
+                    lanc.subcategoria = 'transferencia';
+                } else {
+                    lanc.conta_destino = '';
+                }
                 if (actions && actions.salvarLancamento) await actions.salvarLancamento(lanc);
                 setEditingLanc(null);
                 setShowNew(false);
@@ -1581,9 +1588,19 @@
                                 </div>
                                 <div>
                                     <label className="form-label">Tipo</label>
-                                    <select className="form-input" value={lancForm.tipo || 'despesa'} onChange={e => setLancForm({ ...lancForm, tipo: e.target.value })}>
+                                    <select className="form-input" value={lancForm.tipo || 'despesa'} onChange={e => {
+                                        const novoTipo = e.target.value;
+                                        const upd = { ...lancForm, tipo: novoTipo };
+                                        if (novoTipo === 'transferencia_interna') {
+                                            upd.categoria_id = '';
+                                        } else {
+                                            upd.conta_destino = '';
+                                        }
+                                        setLancForm(upd);
+                                    }}>
                                         <option value="despesa">Despesa</option>
                                         <option value="receita">Receita</option>
+                                        <option value="transferencia_interna">↔ Transferência entre contas</option>
                                     </select>
                                 </div>
                             </div>
@@ -1596,24 +1613,34 @@
                                     <label className="form-label">Valor (R$)</label>
                                     <InputMoeda value={lancForm.valor || ''} onChange={v => setLancForm({ ...lancForm, valor: v || 0 })} />
                                 </div>
-                                <div>
-                                    <label className="form-label">Categoria</label>
-                                    <select className="form-input" value={lancForm.categoria_id || ''} onChange={e => setLancForm({ ...lancForm, categoria_id: e.target.value })}>
-                                        <option value="">Selecione...</option>
-                                        {data.categorias
-                                            .filter(c => {
-                                                // Filtra categorias pelo tipo do lançamento
-                                                const tipo = lancForm.tipo || 'despesa';
-                                                if (!c.grupo) return true; // sem grupo definido, mostra sempre
-                                                if (tipo === 'receita') return c.grupo === 'receita';
-                                                return c.grupo !== 'receita'; // despesa mostra tudo menos receita
-                                            })
-                                            .map(c => <option key={c.id} value={c.id}>{c.emoji} {c.nome}</option>)}
-                                    </select>
-                                </div>
+                                {lancForm.tipo === 'transferencia_interna' ? (
+                                    <div>
+                                        <label className="form-label">Conta destino</label>
+                                        <select className="form-input" value={lancForm.conta_destino || ''} onChange={e => setLancForm({ ...lancForm, conta_destino: e.target.value })}>
+                                            <option value="">Selecione...</option>
+                                            {data.contas.filter(c => c.status !== 'arquivada' && c.id !== lancForm.conta_origem).map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}
+                                        </select>
+                                    </div>
+                                ) : (
+                                    <div>
+                                        <label className="form-label">Categoria</label>
+                                        <select className="form-input" value={lancForm.categoria_id || ''} onChange={e => setLancForm({ ...lancForm, categoria_id: e.target.value })}>
+                                            <option value="">Selecione...</option>
+                                            {data.categorias
+                                                .filter(c => {
+                                                    // Filtra categorias pelo tipo do lançamento
+                                                    const tipo = lancForm.tipo || 'despesa';
+                                                    if (!c.grupo) return true; // sem grupo definido, mostra sempre
+                                                    if (tipo === 'receita') return c.grupo === 'receita';
+                                                    return c.grupo !== 'receita'; // despesa mostra tudo menos receita
+                                                })
+                                                .map(c => <option key={c.id} value={c.id}>{c.emoji} {c.nome}</option>)}
+                                        </select>
+                                    </div>
+                                )}
                             </div>
                             <div>
-                                <label className="form-label">Conta</label>
+                                <label className="form-label">{lancForm.tipo === 'transferencia_interna' ? 'Conta origem' : 'Conta'}</label>
                                 <select className="form-input" value={lancForm.conta_origem || ''} onChange={e => setLancForm({ ...lancForm, conta_origem: e.target.value })}>
                                     <option value="">Selecione...</option>
                                     {data.contas.filter(c => c.status !== 'arquivada').map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}
@@ -2269,11 +2296,11 @@
                                                         }}>reembolsável</span>
                                                     )}
                                                 </td>
-                                                <td>{cat ? `${cat.emoji} ${cat.nome}` : '—'}</td>
-                                                <td style={{ fontWeight: '600', color: t.tipo === 'receita' ? '#16a34a' : '#ef4444' }}>
-                                                    {t.tipo === 'receita' ? '+' : '-'}{formatCurrency(t.valor)}
+                                                <td>{cat ? `${cat.emoji} ${cat.nome}` : (t.tipo === 'transferencia_interna' ? '↔ Transferência entre contas' : '—')}</td>
+                                                <td style={{ fontWeight: '600', color: t.tipo === 'receita' || t.tipo === 'estorno' ? '#16a34a' : t.tipo === 'transferencia_interna' ? '#6366f1' : '#ef4444' }}>
+                                                    {t.tipo === 'receita' || t.tipo === 'estorno' ? '+' : t.tipo === 'transferencia_interna' ? '↔ ' : '-'}{formatCurrency(t.valor)}
                                                 </td>
-                                                <td>{conta?.nome || t.conta_origem}</td>
+                                                <td>{conta?.nome || t.conta_origem}{t.tipo === 'transferencia_interna' && t.conta_destino ? ` → ${getAccountById(data.contas, t.conta_destino)?.nome || t.conta_destino}` : ''}</td>
                                                 <td style={{ textAlign: 'center' }}>
                                                     <button style={{ background: 'none', border: 'none', color: '#3b82f6', cursor: 'pointer', fontSize: '0.8rem', fontWeight: '600', marginRight: '0.5rem' }}
                                                         onClick={() => openEdit(t)}>✏️</button>
@@ -4250,6 +4277,95 @@
                 return parseFloat(s);
             };
 
+            // Detecta se um lançamento é transferência entre contas próprias (ou da família)
+            // Retorna a conta destino detectada, ou null se não for transferência interna.
+            // Lógica: match por titular/co-titular (PIX sempre traz nome), depois instituição,
+            // e por fim match cruzado com lançamentos já importados (mesma data+valor).
+            const detectarContaTransferencia = (descricao, valor, dataStr, contaAtualId) => {
+                const descUpper = String(descricao || '').toUpperCase();
+                if (!descUpper.includes('TRANSFER') &&
+                    !descUpper.includes('PIX ENVIADO') &&
+                    !descUpper.includes('PIX RECEBIDO') &&
+                    !descUpper.includes('PIX - ENVIADO') &&
+                    !descUpper.includes('PIX - RECEBIDO')) return null;
+
+                const outrasContas = data.contas.filter(c => c.id !== contaAtualId && c.status !== 'arquivada');
+                const extrairNomes = (conta) => {
+                    const nomes = [];
+                    if (conta?.titular) nomes.push(conta.titular.toUpperCase().trim());
+                    if (conta?.co_titulares) {
+                        conta.co_titulares.split(',').forEach(n => {
+                            const nome = n.trim().toUpperCase();
+                            if (nome.length > 3) nomes.push(nome);
+                        });
+                    }
+                    return nomes;
+                };
+                const contasComNomes = outrasContas.map(conta => ({ conta, nomes: extrairNomes(conta) }));
+                const contaAtual = data.contas.find(c => c.id === contaAtualId);
+                const nomesContaAtual = extrairNomes(contaAtual);
+
+                // Critério 1: extrair nome do PIX e match contra titulares/co-titulares
+                const matchNome = descricao.match(/Transfer[eê]ncia\s+(?:enviada|recebida)\s+(?:pelo Pix\s*-\s*)?(.+?)(?:\s*-\s*[•\d])/i)
+                    || descricao.match(/Transfer[eê]ncia\s+Recebida\s*-\s*(.+?)(?:\s*-\s*[•\d])/i)
+                    || descricao.match(/Pix\s+(?:enviado|recebido)\s+(.+?)(?:\s*-\s*[•\d])/i)
+                    || descricao.match(/Pix\s+(?:enviado|recebido)\s+(.+)$/i)
+                    || descricao.match(/Pix\s*-\s*(?:Enviado|Recebido)\s*-\s*\d{2}\/\d{2}\s+\d{2}:\d{2}\s+\d*\s*([A-ZÁ-Ú][A-ZÁ-Ú\s]+?)(?:\s*$)/i);
+                let nomeExtraido = false;
+                if (matchNome) {
+                    nomeExtraido = true;
+                    const nomePix = matchNome[1].trim().toUpperCase();
+                    const palavrasNome = nomePix.split(/\s+/).filter(p => p.length > 2);
+                    const matchaConta = (nomesList) => {
+                        for (const nomeRef of nomesList) {
+                            const palavrasRef = nomeRef.split(/\s+/).filter(p => p.length > 2);
+                            const matchCount = palavrasRef.filter(p => palavrasNome.includes(p)).length;
+                            const minPalavras = Math.min(palavrasRef.length, palavrasNome.length);
+                            const threshold = Math.max(2, Math.ceil(minPalavras * 0.7));
+                            if (matchCount >= threshold) return true;
+                        }
+                        return false;
+                    };
+                    const ehFamilia = matchaConta(nomesContaAtual) || contasComNomes.some(cn => matchaConta(cn.nomes));
+                    if (ehFamilia) {
+                        for (const { conta, nomes } of contasComNomes) {
+                            if (matchaConta(nomes) || matchaConta(nomesContaAtual)) {
+                                const inst = (conta.instituicao || '').toUpperCase().trim();
+                                if (inst.length >= 4 && descUpper.includes(inst)) return conta;
+                            }
+                        }
+                        for (const { conta, nomes } of contasComNomes) {
+                            if (matchaConta(nomes) || matchaConta(nomesContaAtual)) return conta;
+                        }
+                    }
+                }
+
+                // Critério 2: match por instituição (só se não extraiu nome)
+                if (!nomeExtraido) {
+                    for (const conta of outrasContas) {
+                        const inst = (conta.instituicao || '').toUpperCase().trim();
+                        if (inst.length >= 4 && descUpper.includes(inst)) return conta;
+                    }
+                }
+
+                // Critério 3: match cruzado com lançamentos já importados (mesma data+valor)
+                if (data.lancamentos && data.lancamentos.length > 0 && dataStr) {
+                    const valorAbs = Math.abs(valor);
+                    const lancMatch = data.lancamentos.find(l =>
+                        l.tipo === 'transferencia_interna' &&
+                        l.conta_origem !== contaAtualId &&
+                        l.data === dataStr &&
+                        Math.abs(Math.abs(Number(l.valor)) - valorAbs) < 0.01
+                    );
+                    if (lancMatch) {
+                        const contaOrigem = outrasContas.find(c => c.id === lancMatch.conta_origem);
+                        if (contaOrigem) return contaOrigem;
+                    }
+                }
+
+                return null;
+            };
+
             // Parser CSV inteligente (Nubank, BB, genérico)
             const parsearCSV = (text, nomeArquivo) => {
                 const lines = text.split('\n').filter(l => l.trim());
@@ -4980,11 +5096,18 @@
                             tipo = valNum >= 0 ? 'receita' : 'despesa';
                         }
 
+                        // Detectar transferência entre contas próprias/família (PIX, TED, DOC)
+                        const contaTransfDetectada = detectarContaTransferencia(descricao, valor, dataStr, cartaoSelecionado);
+                        if (contaTransfDetectada) {
+                            tipo = 'transferencia_interna';
+                        }
+
                         linhas.push({
                             data: dataStr,
                             descricao: descricao,
                             valor: valor,
                             tipo: tipo,
+                            contaTransfDetectada: contaTransfDetectada || null,
                         });
                     }
 
@@ -5355,7 +5478,7 @@
                         conta_origem: contaId,
                         conta_destino: contaInvestVinculada || (ehTransfComum && l.contaTransfDetectada ? l.contaTransfDetectada.id : '') || '',
                         cartao: contaId,
-                        categoria: (ehInvestimento || ehTransfComum) ? 'transferencia' : (classificacoes[origIdx]?.categoria_id || ''),
+                        categoria: (ehInvestimento || ehTransfComum) ? '' : (classificacoes[origIdx]?.categoria_id || ''),
                         subcategoria: ehInvestimento ? l.investimentoInfo.subtipo : (ehTransfComum ? 'transferencia' : ''),
                         status_classificacao: (ehInvestimento || ehTransfComum) ? 'classificado' : (classificacoes[origIdx]?.confianca === 'baixa' ? 'pendente_confirmacao' : 'classificado'),
                         origem_dado: (preview.formato === 'Nubank Conta Corrente' || preview.formato === 'Mercado Pago Extrato') ? 'importacao_extrato' : 'importacao_fatura',
