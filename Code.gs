@@ -23,6 +23,7 @@ function setupInicial() {
     'tetos': ['id', 'categoria', 'teto_mensal', 'teto_semanal', 'teto_anual', 'mes_referencia'],
     'metas': ['id', 'nome', 'tipo', 'valor_alvo', 'valor_atual', 'data_inicio', 'data_limite', 'status', 'prioridade'],
     'regras_classificacao': ['id', 'padrao_texto', 'categoria', 'subcategoria', 'banco', 'tipo_transacao', 'confianca', 'vezes_usada'],
+    'regras_split': ['id', 'padrao_texto', 'partes_json', 'vezes_usada', 'criada_em', 'atualizada_em'],
     'importacoes_log': ['id', 'data_importacao', 'tipo_arquivo', 'nome_arquivo', 'conta_detectada', 'linhas_importadas', 'duplicidades_ignoradas', 'itens_pendentes', 'status'],
     'config': ['chave', 'valor', 'descricao'],
     'saldos_historico': ['id', 'data', 'conta_id', 'conta_nome', 'instituicao', 'produto', 'tipo_movimento', 'valor_movimento', 'saldo_apos', 'observacao', 'lote_importacao']
@@ -163,6 +164,9 @@ function doGet(e) {
       case 'regras':
         result = lerAba('regras_classificacao');
         break;
+      case 'regras_split':
+        result = lerAba('regras_split');
+        break;
       case 'config':
         result = lerAba('config');
         break;
@@ -195,6 +199,8 @@ function doGet(e) {
             case 'salvar_meta': result = salvarMeta(postDados); break;
             case 'salvar_teto': result = salvarTeto(postDados); break;
             case 'salvar_regra': result = salvarRegra(postDados); break;
+            case 'salvar_regra_split': result = salvarGenerico('regras_split', postDados); break;
+            case 'deletar_regra_split': result = deletarLinha('regras_split', postDados.id || payload.id); break;
             case 'atualizar_saldo': result = atualizarSaldo(postDados.conta_id, postDados.novo_saldo); break;
             case 'salvar_saldo_historico': result = salvarGenerico('saldos_historico', postDados); break;
             case 'deletar_saldo_historico': result = deletarLinha('saldos_historico', postDados.id); break;
@@ -260,6 +266,12 @@ function doPost(e) {
       case 'salvar_regra':
         result = salvarRegra(body.dados);
         break;
+      case 'salvar_regra_split':
+        result = salvarGenerico('regras_split', body.dados);
+        break;
+      case 'deletar_regra_split':
+        result = deletarLinha('regras_split', body.dados ? body.dados.id : body.id);
+        break;
       case 'atualizar_saldo':
         result = atualizarSaldo(body.conta_id, body.novo_saldo);
         break;
@@ -292,6 +304,7 @@ var HEADERS = {
   'tetos': ['id', 'categoria', 'teto_mensal', 'teto_semanal', 'teto_anual', 'mes_referencia'],  // mantém por compatibilidade
   'metas': ['id', 'nome', 'tipo', 'valor_alvo', 'valor_atual', 'data_inicio', 'data_limite', 'status', 'prioridade'],
   'regras_classificacao': ['id', 'padrao_texto', 'categoria', 'subcategoria', 'banco', 'tipo_transacao', 'confianca', 'vezes_usada'],
+  'regras_split': ['id', 'padrao_texto', 'partes_json', 'vezes_usada', 'criada_em', 'atualizada_em'],
   'importacoes_log': ['id', 'data_importacao', 'tipo_arquivo', 'nome_arquivo', 'conta_detectada', 'linhas_importadas', 'duplicidades_ignoradas', 'itens_pendentes', 'status'],
   'config': ['chave', 'valor', 'descricao'],
   'saldos_historico': ['id', 'data', 'conta_id', 'conta_nome', 'instituicao', 'produto', 'tipo_movimento', 'valor_movimento', 'saldo_apos', 'observacao', 'lote_importacao']
