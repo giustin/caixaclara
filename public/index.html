@@ -3029,6 +3029,7 @@
             const [hoveredPoint, setHoveredPoint] = useState(null);
             const [filtroContas, setFiltroContas] = useState([]); // array de IDs selecionados
             const [excluirReembolsaveis, setExcluirReembolsaveis] = useState(true);
+            const [dateOffset, setDateOffset] = useState(0); // offset em unidades do período selecionado
 
             const toggleConta = (id) => {
                 setFiltroContas(prev =>
@@ -3062,18 +3063,32 @@
 
             const hoje = new Date();
 
-            // Calcula início e fim da semana atual (segunda a domingo)
-            const diaSemana = hoje.getDay(); // 0=dom, 1=seg, ..., 6=sab
+            // Data de referência baseada no offset de navegação
+            const refDate = new Date(hoje);
+            if (period === 'semana') {
+                refDate.setDate(refDate.getDate() + dateOffset * 7);
+            } else if (period === 'mes') {
+                refDate.setMonth(refDate.getMonth() + dateOffset);
+            } else if (period === 'trimestre') {
+                refDate.setMonth(refDate.getMonth() + dateOffset * 3);
+            } else if (period === 'semestre') {
+                refDate.setMonth(refDate.getMonth() + dateOffset * 6);
+            } else if (period === 'ano') {
+                refDate.setFullYear(refDate.getFullYear() + dateOffset);
+            }
+
+            // Calcula início e fim da semana de referência (segunda a domingo)
+            const diaSemana = refDate.getDay(); // 0=dom, 1=seg, ..., 6=sab
             const diffParaSegunda = diaSemana === 0 ? -6 : 1 - diaSemana;
-            const inicioSemana = new Date(hoje);
-            inicioSemana.setDate(hoje.getDate() + diffParaSegunda);
+            const inicioSemana = new Date(refDate);
+            inicioSemana.setDate(refDate.getDate() + diffParaSegunda);
             inicioSemana.setHours(0, 0, 0, 0);
             const fimSemana = new Date(inicioSemana);
             fimSemana.setDate(inicioSemana.getDate() + 6);
             fimSemana.setHours(23, 59, 59, 999);
 
-            // Número de semanas no mês atual (para dividir teto mensal)
-            const diasNoMes = new Date(hoje.getFullYear(), hoje.getMonth() + 1, 0).getDate();
+            // Número de semanas no mês de referência (para dividir teto mensal)
+            const diasNoMes = new Date(refDate.getFullYear(), refDate.getMonth() + 1, 0).getDate();
             const semanasNoMes = diasNoMes / 7;
 
             const filtrarPorPeriodo = (lancamentos) => {
@@ -3083,11 +3098,11 @@
                     if (period === 'semana') {
                         return dataLanc >= inicioSemana && dataLanc <= fimSemana;
                     }
-                    const diffMeses = (hoje.getFullYear() - dataLanc.getFullYear()) * 12 + (hoje.getMonth() - dataLanc.getMonth());
+                    const diffMeses = (refDate.getFullYear() - dataLanc.getFullYear()) * 12 + (refDate.getMonth() - dataLanc.getMonth());
                     if (period === 'mes') return diffMeses === 0;
-                    if (period === 'trimestre') return diffMeses < 3;
-                    if (period === 'semestre') return diffMeses < 6;
-                    if (period === 'ano') return diffMeses < 12;
+                    if (period === 'trimestre') return diffMeses >= 0 && diffMeses < 3;
+                    if (period === 'semestre') return diffMeses >= 0 && diffMeses < 6;
+                    if (period === 'ano') return diffMeses >= 0 && diffMeses < 12;
                     return true;
                 });
             };
@@ -3199,17 +3214,43 @@
                             const labelFimSemana = `${String(fimSemana.getDate()).padStart(2, '0')}/${String(fimSemana.getMonth() + 1).padStart(2, '0')}`;
                             const labels = {
                                 semana: `Semana (${labelInicioSemana} a ${labelFimSemana})`,
-                                mes: `Mês (${String(hoje.getMonth() + 1).padStart(2, '0')}/${hoje.getFullYear()})`,
-                                trimestre: `Trimestre (${String(Math.floor(hoje.getMonth() / 3) * 3 + 1).padStart(2, '0')}-${String(Math.floor(hoje.getMonth() / 3) * 3 + 3).padStart(2, '0')}/${hoje.getFullYear()})`,
-                                semestre: `Semestre (${String((hoje.getMonth() >= 6 ? 7 : 1)).padStart(2, '0')}-${String((hoje.getMonth() >= 6 ? 12 : 6)).padStart(2, '0')}/${hoje.getFullYear()})`,
-                                ano: `Ano (01-12/${hoje.getFullYear()})`
+                                mes: `Mês (${String(refDate.getMonth() + 1).padStart(2, '0')}/${refDate.getFullYear()})`,
+                                trimestre: `Trimestre (${String(Math.floor(refDate.getMonth() / 3) * 3 + 1).padStart(2, '0')}-${String(Math.floor(refDate.getMonth() / 3) * 3 + 3).padStart(2, '0')}/${refDate.getFullYear()})`,
+                                semestre: `Semestre (${String((refDate.getMonth() >= 6 ? 7 : 1)).padStart(2, '0')}-${String((refDate.getMonth() >= 6 ? 12 : 6)).padStart(2, '0')}/${refDate.getFullYear()})`,
+                                ano: `Ano (01-12/${refDate.getFullYear()})`
                             };
                             return ['semana', 'mes', 'trimestre', 'semestre', 'ano'].map(p => (
-                                <button key={p} className={`tab-button ${period === p ? 'active' : ''}`} onClick={() => setPeriod(p)}>
+                                <button key={p} className={`tab-button ${period === p ? 'active' : ''}`} onClick={() => { setPeriod(p); setDateOffset(0); }}>
                                     {labels[p]}
                                 </button>
                             ));
                         })()}
+                    </div>
+
+                    {/* Navegação entre períodos */}
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '1rem', marginBottom: '1rem' }}>
+                        <button
+                            onClick={() => setDateOffset(prev => prev - 1)}
+                            style={{ background: 'none', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '0.4rem 0.8rem', cursor: 'pointer', fontSize: '1rem', color: '#475569', display: 'flex', alignItems: 'center', gap: '0.3rem' }}
+                            title="Período anterior"
+                        >
+                            ← Anterior
+                        </button>
+                        {dateOffset !== 0 && (
+                            <button
+                                onClick={() => setDateOffset(0)}
+                                style={{ background: '#3b82f6', border: 'none', borderRadius: '8px', padding: '0.4rem 0.8rem', cursor: 'pointer', fontSize: '0.85rem', color: '#fff', fontWeight: '500' }}
+                            >
+                                Hoje
+                            </button>
+                        )}
+                        <button
+                            onClick={() => setDateOffset(prev => prev + 1)}
+                            style={{ background: 'none', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '0.4rem 0.8rem', cursor: 'pointer', fontSize: '1rem', color: '#475569', display: 'flex', alignItems: 'center', gap: '0.3rem' }}
+                            title="Próximo período"
+                        >
+                            Próximo →
+                        </button>
                     </div>
 
                     {/* Filtro por Conta (multiselect) */}
