@@ -3050,6 +3050,16 @@
             const isDespesaReal = (l) => l.tipo === 'despesa' && !idsTransferencia.has(l.categoria_id) && (excluirReembolsaveis ? !isReembolsavel(l) : true);
             const isReceitaReal = (l) => l.tipo === 'receita' && !isReembolsavel(l);
 
+            // Parse YYYY-MM-DD como data LOCAL (evita deslocamento de timezone
+            // — "2026-04-01" puro é parseado como UTC e vira 31/03 21h no Brasil).
+            const parseDataLocal = (s) => {
+                if (!s) return null;
+                const str = String(s);
+                if (str.includes('T') || str.includes(' ')) return new Date(str);
+                const [y, m, d] = str.split('-').map(Number);
+                return new Date(y, (m || 1) - 1, d || 1);
+            };
+
             const hoje = new Date();
 
             // Calcula início e fim da semana atual (segunda a domingo)
@@ -3069,7 +3079,7 @@
             const filtrarPorPeriodo = (lancamentos) => {
                 return lancamentos.filter(l => {
                     if (!l.data) return false;
-                    const dataLanc = new Date(l.data);
+                    const dataLanc = parseDataLocal(l.data);
                     if (period === 'semana') {
                         return dataLanc >= inicioSemana && dataLanc <= fimSemana;
                     }
@@ -3423,7 +3433,7 @@
                             semanas.forEach((sem, idx) => {
                                 const gastosSem = lancParaCurva.filter(l => {
                                     if (!l.data) return false;
-                                    const d = new Date(l.data);
+                                    const d = parseDataLocal(l.data);
                                     return d >= sem.inicio && d <= new Date(sem.fim.getFullYear(), sem.fim.getMonth(), sem.fim.getDate(), 23, 59, 59);
                                 }).reduce((s, l) => s + l.valor, 0);
                                 acum += gastosSem;
@@ -3452,7 +3462,7 @@
                                 const fimM = new Date(hojeRef.getFullYear(), mesIdx + 1, 0, 23, 59, 59);
                                 const gastosM = lancParaCurva.filter(l => {
                                     if (!l.data) return false;
-                                    const d = new Date(l.data);
+                                    const d = parseDataLocal(l.data);
                                     return d >= inicioM && d <= fimM;
                                 }).reduce((s, l) => s + l.valor, 0);
                                 acum += gastosM;
