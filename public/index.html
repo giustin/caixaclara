@@ -6448,7 +6448,15 @@
                             <div style={{ maxHeight: '600px', overflow: 'auto' }}>
                                 <table className="table">
                                     <thead className="table-header" style={{ position: 'sticky', top: 0, zIndex: 1 }}>
-                                        <tr><th style={{ width: '12%' }}>{ehCartao ? 'Data compra' : 'Data'}</th><th>Descrição</th><th style={{ width: '18%' }}>Categoria</th><th style={{ textAlign: 'center', width: '5%' }} title="Reembolsável">💼</th><th style={{ textAlign: 'right', width: '14%' }}>Valor</th><th style={{ width: '7%' }}>Tipo</th></tr>
+                                        <tr>
+                                            <th style={{ width: '12%' }}>{ehCartao ? 'Data compra' : 'Data'}</th>
+                                            <th>Descrição</th>
+                                            <th style={{ width: '18%' }}>Categoria</th>
+                                            <th style={{ textAlign: 'center', width: '4%', cursor: 'help' }} title="💼 Reembolsável — marque quando alguém te reembolsa este gasto (ou você precisa devolver essa receita). A linha não entra nos indicadores de despesa/receita do dashboard.">💼</th>
+                                            <th style={{ textAlign: 'center', width: '5%', cursor: 'help' }} title="⎇ Dividir — clique para dividir um lançamento em partes (ex: boleto compartilhado, conta dividida com amigos). Cada parte pode ter categoria e flag de reembolso independentes.">⎇</th>
+                                            <th style={{ textAlign: 'right', width: '13%' }}>Valor</th>
+                                            <th style={{ width: '7%' }}>Tipo</th>
+                                        </tr>
                                     </thead>
                                     <tbody>
                                         {preview.linhas.map((l, i) => (
@@ -6473,20 +6481,6 @@
                                                         </span>
                                                     )}
                                                     {l.descricao}
-                                                    {(l.tipo === 'despesa' || l.tipo === 'receita') && !duplicadas[i] && (
-                                                        <button
-                                                            onClick={() => abrirSplit(i)}
-                                                            title={l.origemSplit ? 'Reeditar a divisão deste lançamento' : 'Dividir este lançamento em partes'}
-                                                            style={{ marginLeft: '0.5rem', background: 'none', border: '1px solid #e2e8f0', borderRadius: '4px', padding: '0.1rem 0.4rem', fontSize: '0.7rem', cursor: 'pointer', color: '#6366f1', fontWeight: '600' }}
-                                                        >⎇ {l.origemSplit ? 'Reeditar' : 'Dividir'}</button>
-                                                    )}
-                                                    {l.origemSplitAuto && !duplicadas[i] && (
-                                                        <button
-                                                            onClick={() => desfazerAutoSplit(i)}
-                                                            title="Fundir as partes de volta em uma linha e opcionalmente apagar a regra aprendida"
-                                                            style={{ marginLeft: '0.3rem', background: 'none', border: '1px solid #fed7aa', borderRadius: '4px', padding: '0.1rem 0.4rem', fontSize: '0.7rem', cursor: 'pointer', color: '#9a3412', fontWeight: '600' }}
-                                                        >↩ Desfazer</button>
-                                                    )}
                                                 </td>
                                                 <td>
                                                     {l.tipo === 'transferencia_interna' ? (
@@ -6531,8 +6525,24 @@
                                                         checked={!!reembolsaveis[i]}
                                                         onChange={e => setReembolsaveis(prev => ({ ...prev, [i]: e.target.checked }))}
                                                         style={{ width: '16px', height: '16px', cursor: 'pointer', accentColor: '#3b82f6' }}
-                                                        title="Marcar como reembolsável"
+                                                        title="Marcar como reembolsável (não entra nos indicadores do dashboard)"
                                                     />
+                                                </td>
+                                                <td style={{ textAlign: 'center', whiteSpace: 'nowrap' }}>
+                                                    {(l.tipo === 'despesa' || l.tipo === 'receita') && !duplicadas[i] && (
+                                                        <button
+                                                            onClick={() => abrirSplit(i)}
+                                                            title={l.origemSplit ? 'Reeditar a divisão deste lançamento' : 'Dividir este lançamento em partes'}
+                                                            style={{ background: 'none', border: '1px solid #e2e8f0', borderRadius: '4px', padding: '0.15rem 0.35rem', fontSize: '0.85rem', cursor: 'pointer', color: l.origemSplit ? (l.origemSplitAuto ? '#9a3412' : '#6d28d9') : '#6366f1', lineHeight: 1 }}
+                                                        >⎇</button>
+                                                    )}
+                                                    {l.origemSplitAuto && !duplicadas[i] && (
+                                                        <button
+                                                            onClick={() => desfazerAutoSplit(i)}
+                                                            title="Desfazer split automático: funde as partes de volta e opcionalmente apaga a regra aprendida"
+                                                            style={{ marginLeft: '0.2rem', background: 'none', border: '1px solid #fed7aa', borderRadius: '4px', padding: '0.15rem 0.35rem', fontSize: '0.85rem', cursor: 'pointer', color: '#9a3412', lineHeight: 1 }}
+                                                        >↩</button>
+                                                    )}
                                                 </td>
                                                 <td style={{ textAlign: 'right', fontWeight: '600', color: l.tipo === 'transferencia_interna' ? (l.investimentoInfo ? '#7c3aed' : '#0284c7') : (l.tipo === 'receita' || l.tipo === 'estorno') ? '#16a34a' : '#ef4444', fontSize: '0.85rem' }}>
                                                     {l.tipo === 'transferencia_interna' ? '↔' : (l.tipo === 'receita' || l.tipo === 'estorno') ? '+' : '-'}{formatCurrency(l.valor)}
@@ -6553,6 +6563,7 @@
                                                 TOTAL ({linhasValidas.length} lançamento{linhasValidas.length !== 1 ? 's' : ''} novo{linhasValidas.length !== 1 ? 's' : ''})
                                                 {qtdDuplicadas > 0 && <span style={{ fontWeight: '400', color: '#94a3b8', fontSize: '0.75rem' }}> + {qtdDuplicadas} duplicado{qtdDuplicadas > 1 ? 's' : ''}</span>}
                                             </td>
+                                            <td></td>
                                             <td></td>
                                             <td></td>
                                             <td style={{ textAlign: 'right', fontWeight: '700', color: '#0f172a', fontSize: '1rem' }}>{formatCurrency(Math.abs(totalLiquido))}</td>
