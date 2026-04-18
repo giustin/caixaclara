@@ -22,7 +22,7 @@ function setupInicial() {
     'categorias': ['id', 'nome', 'icone', 'grupo', 'ativa', 'ordem', 'tipo'],
     'tetos': ['id', 'categoria', 'teto_mensal', 'teto_semanal', 'teto_anual', 'mes_referencia'],
     'metas': ['id', 'nome', 'tipo', 'valor_alvo', 'valor_atual', 'data_inicio', 'data_limite', 'status', 'prioridade'],
-    'regras_classificacao': ['id', 'padrao_texto', 'categoria', 'subcategoria', 'banco', 'tipo_transacao', 'confianca', 'vezes_usada'],
+    'regras_classificacao': ['id', 'padrao_texto', 'categoria', 'subcategoria', 'banco', 'tipo_transacao', 'confianca', 'vezes_usada', 'ativa', 'criada_em'],
     'regras_split': ['id', 'padrao_texto', 'partes_json', 'vezes_usada', 'criada_em', 'atualizada_em'],
     'importacoes_log': ['id', 'data_importacao', 'tipo_arquivo', 'nome_arquivo', 'conta_detectada', 'linhas_importadas', 'duplicidades_ignoradas', 'itens_pendentes', 'status'],
     'config': ['chave', 'valor', 'descricao'],
@@ -199,6 +199,7 @@ function doGet(e) {
             case 'salvar_meta': result = salvarMeta(postDados); break;
             case 'salvar_teto': result = salvarTeto(postDados); break;
             case 'salvar_regra': result = salvarRegra(postDados); break;
+            case 'deletar_regra': result = deletarLinha('regras_classificacao', postDados.id || payload.id); break;
             case 'salvar_regra_split': result = salvarGenerico('regras_split', postDados); break;
             case 'deletar_regra_split': result = deletarLinha('regras_split', postDados.id || payload.id); break;
             case 'atualizar_saldo': result = atualizarSaldo(postDados.conta_id, postDados.novo_saldo); break;
@@ -266,6 +267,9 @@ function doPost(e) {
       case 'salvar_regra':
         result = salvarRegra(body.dados);
         break;
+      case 'deletar_regra':
+        result = deletarLinha('regras_classificacao', body.dados ? body.dados.id : body.id);
+        break;
       case 'salvar_regra_split':
         result = salvarGenerico('regras_split', body.dados);
         break;
@@ -303,7 +307,7 @@ var HEADERS = {
   'categorias': ['id', 'nome', 'icone', 'grupo', 'ativa', 'ordem', 'teto_mensal', 'tipo'],
   'tetos': ['id', 'categoria', 'teto_mensal', 'teto_semanal', 'teto_anual', 'mes_referencia'],  // mantém por compatibilidade
   'metas': ['id', 'nome', 'tipo', 'valor_alvo', 'valor_atual', 'data_inicio', 'data_limite', 'status', 'prioridade'],
-  'regras_classificacao': ['id', 'padrao_texto', 'categoria', 'subcategoria', 'banco', 'tipo_transacao', 'confianca', 'vezes_usada'],
+  'regras_classificacao': ['id', 'padrao_texto', 'categoria', 'subcategoria', 'banco', 'tipo_transacao', 'confianca', 'vezes_usada', 'ativa', 'criada_em'],
   'regras_split': ['id', 'padrao_texto', 'partes_json', 'vezes_usada', 'criada_em', 'atualizada_em'],
   'importacoes_log': ['id', 'data_importacao', 'tipo_arquivo', 'nome_arquivo', 'conta_detectada', 'linhas_importadas', 'duplicidades_ignoradas', 'itens_pendentes', 'status'],
   'config': ['chave', 'valor', 'descricao'],
