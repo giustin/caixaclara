@@ -6046,13 +6046,14 @@
                 setSplitModal(prev => {
                     if (!prev) return prev;
                     const partes = prev.partes.map((p, i) => i === idx ? { ...p, [campo]: valor } : p);
-                    if (campo === 'valor' && idx > 0) partes[idx].tocadaManualmente = true;
-                    // Auto-complete: ao editar valor da parte 1, ajustar parte 2 se só há 2 partes e parte 2 não foi tocada
-                    if (campo === 'valor' && idx === 0 && partes.length === 2 && !partes[1].tocadaManualmente) {
+                    // Caso 2 partes: ao editar o valor de qualquer uma, a outra complementa automaticamente
+                    // (mirror). Para 3+ partes o usuário ajusta manualmente.
+                    if (campo === 'valor' && partes.length === 2) {
                         const valorTotal = Number(prev.original.valor) || 0;
                         const valorNum = Number(valor) || 0;
+                        const outroIdx = idx === 0 ? 1 : 0;
                         const complemento = Math.max(0, Math.round((valorTotal - valorNum) * 100) / 100);
-                        partes[1] = { ...partes[1], valor: complemento };
+                        partes[outroIdx] = { ...partes[outroIdx], valor: complemento };
                     }
                     return { ...prev, partes };
                 });
