@@ -5913,6 +5913,7 @@
                         linhaIdx: startIdx,
                         grupoTotal: partesAtuais.length,
                         regraSplitId: linha.regraSplitId || null,
+                        memorizar: !!linha.regraSplitId, // se já tem regra, segue memorizando; senão (split manual one-off) fica desligado
                         original: { valor: valorTotal, descricao: descricaoBase, categoria_id: partesAtuais[0]?.categoria_id || '', tipo: linha.tipo },
                         partes: partesAtuais,
                     });
@@ -5924,12 +5925,80 @@
                     linhaIdx,
                     grupoTotal: 1,
                     regraSplitId: null,
+                    memorizar: true, // default: memoriza (caso mais comum é recorrente, ex: boleto escola). Desmarcar em casos pontuais (ex: churrasco dividido uma vez).
                     original: { valor: linha.valor, descricao: linha.descricao, categoria_id: categoriaAtual, tipo: linha.tipo },
                     partes: [
                         { valor: linha.valor, categoria_id: categoriaAtual, reembolsavel: false, descricao: linha.descricao + ' (parte 1)', tocadaManualmente: false },
                         { valor: 0, categoria_id: categoriaAtual, reembolsavel: true, descricao: linha.descricao + ' (parte 2)', tocadaManualmente: false },
                     ],
                 });
+            };
+
+            // Desfaz um split auto-aplicado: funde as N partes consecutivas em 1 linha com o valor total e,
+            // opcionalmente, apaga a regra para que não reaplique em importações futuras.
+            const desfazerAutoSplit = async (linhaIdx) => {
+                const linha = preview.linhas[linhaIdx];
+                if (!linha || !linha.origemSplit || !linha.origemSplitTotal) return;
+                const startIdx = linhaIdx - ((linha.origemSplitIndex || 1) - 1);
+                const total = linha.origemSplitTotal;
+                const descricaoBase = limparSufixoParte(linha.descricao);
+                let valorTotal = 0;
+                for (let k = 0; k < total; k++) {
+                    const lk = preview.linhas[startIdx + k];
+                    if (!lk || !lk.origemSplit) return; // guarda: se não bate, aborta
+                    valorTotal += Number(lk.valor) || 0;
+                }
+                valorTotal = Math.round(valorTotal * 100) / 100;
+                const linhaRestaurada = {
+                    ...preview.linhas[startIdx],
+                    descricao: descricaoBase,
+                    valor: valorTotal,
+                    origemSplit: undefined,
+                    origemSplitAuto: undefined,
+                    origemSplitIndex: undefined,
+                    origemSplitTotal: undefined,
+                    regraSplitId: undefined,
+                };
+                const novoArray = [
+                    ...preview.linhas.slice(0, startIdx),
+                    linhaRestaurada,
+                    ...preview.linhas.slice(startIdx + total),
+                ];
+                const offset = 1 - total; // mudamos de N para 1
+                const reindex = (obj) => {
+                    const novo = {};
+                    Object.entries(obj).forEach(([k, v]) => {
+                        const i = parseInt(k, 10);
+                        if (i < startIdx) novo[i] = v;
+                        else if (i >= startIdx + total) novo[i + offset] = v;
+                    });
+                    return novo;
+                };
+                const novasClass = reindex(classificacoes);
+                const novosReemb = reindex(reembolsaveis);
+                const novosVinc = reindex(vinculosInvestimento);
+                // Limpa entrada no startIdx (será reclassificada pelo efeito padrão)
+                delete novasClass[startIdx];
+                delete novosReemb[startIdx];
+
+                setPreview({ ...preview, linhas: novoArray });
+                setClassificacoes(novasClass);
+                setReembolsaveis(novosReemb);
+                setVinculosInvestimento(novosVinc);
+
+                // Se havia regra associada, pergunta se quer apagar pra não reaplicar
+                const regraId = linha.regraSplitId;
+                if (regraId) {
+                    const apagar = confirm('Desfazer este split automático. Deseja também apagar a regra aprendida para que não reaplique em importações futuras?');
+                    if (apagar) {
+                        try {
+                            await api.post('deletar_regra_split', { id: regraId });
+                            setRegrasSplit(prev => prev.filter(r => r.id !== regraId));
+                        } catch (e) {
+                            console.warn('Erro ao apagar regra de split:', e);
+                        }
+                    }
+                }
             };
 
             // Salva ou atualiza a regra de split a partir do split confirmado (aprende/reaprende a proporção)
@@ -6006,7 +6075,7 @@
 
             const confirmarSplit = () => {
                 if (!splitModal) return;
-                const { linhaIdx, partes, original, grupoTotal = 1, regraSplitId = null } = splitModal;
+                const { linhaIdx, partes, original, grupoTotal = 1, regraSplitId = null, memorizar = true } = splitModal;
                 const linhaOrig = preview.linhas[linhaIdx];
                 const descricaoBase = original.descricao || linhaOrig.descricao;
 
@@ -6061,8 +6130,10 @@
                 setVinculosInvestimento(novosVinc);
                 setSplitModal(null);
 
-                // Aprende ou re-aprende a regra (pct por parte) em background
-                salvarOuAtualizarRegraSplit(descricaoBase, partes, Number(original.valor) || 0, regraSplitId);
+                // Aprende ou re-aprende a regra (pct por parte) em background — só se usuário optou por memorizar
+                if (memorizar) {
+                    salvarOuAtualizarRegraSplit(descricaoBase, partes, Number(original.valor) || 0, regraSplitId);
+                }
             };
 
             return (
@@ -6396,9 +6467,16 @@
                                                     {(l.tipo === 'despesa' || l.tipo === 'receita') && !duplicadas[i] && (
                                                         <button
                                                             onClick={() => abrirSplit(i)}
-                                                            title="Dividir este lançamento em partes"
+                                                            title={l.origemSplit ? 'Reeditar a divisão deste lançamento' : 'Dividir este lançamento em partes'}
                                                             style={{ marginLeft: '0.5rem', background: 'none', border: '1px solid #e2e8f0', borderRadius: '4px', padding: '0.1rem 0.4rem', fontSize: '0.7rem', cursor: 'pointer', color: '#6366f1', fontWeight: '600' }}
-                                                        >⎇ Dividir</button>
+                                                        >⎇ {l.origemSplit ? 'Reeditar' : 'Dividir'}</button>
+                                                    )}
+                                                    {l.origemSplitAuto && !duplicadas[i] && (
+                                                        <button
+                                                            onClick={() => desfazerAutoSplit(i)}
+                                                            title="Fundir as partes de volta em uma linha e opcionalmente apagar a regra aprendida"
+                                                            style={{ marginLeft: '0.3rem', background: 'none', border: '1px solid #fed7aa', borderRadius: '4px', padding: '0.1rem 0.4rem', fontSize: '0.7rem', cursor: 'pointer', color: '#9a3412', fontWeight: '600' }}
+                                                        >↩ Desfazer</button>
                                                     )}
                                                 </td>
                                                 <td>
@@ -6641,6 +6719,20 @@
                                         }}>
                                             Soma: {formatCurrency(soma)} / {formatCurrency(valorOriginal)} {somaOk ? '✓' : (diff > 0 ? `(sobra ${formatCurrency(Math.abs(diff))})` : `(falta ${formatCurrency(Math.abs(diff))})`)}
                                         </div>
+                                    </div>
+
+                                    <div style={{ marginTop: '0.75rem', padding: '0.6rem 0.75rem', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', display: 'flex', alignItems: 'flex-start', gap: '0.5rem' }}>
+                                        <input
+                                            type="checkbox"
+                                            id="split-memorizar"
+                                            checked={!!splitModal.memorizar}
+                                            onChange={e => setSplitModal(prev => prev ? { ...prev, memorizar: e.target.checked } : prev)}
+                                            style={{ width: '16px', height: '16px', cursor: 'pointer', accentColor: '#6366f1', marginTop: '0.15rem' }}
+                                        />
+                                        <label htmlFor="split-memorizar" style={{ fontSize: '0.82rem', color: '#334155', cursor: 'pointer', lineHeight: 1.4 }}>
+                                            <strong>Memorizar esta divisão</strong> — desmarque se for um split pontual (ex: conta dividida com amigos uma vez só). Marcado, a mesma proporção será aplicada automaticamente em importações futuras com descrição similar.
+                                            {splitModal.regraSplitId && <span style={{ display: 'block', marginTop: '0.2rem', fontSize: '0.75rem', color: '#9a3412' }}>⚠️ Esta divisão já veio de uma regra aprendida. Ao confirmar marcado, a regra é atualizada com os novos valores.</span>}
+                                        </label>
                                     </div>
 
                                     <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end', marginTop: '1rem' }}>
