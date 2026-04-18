@@ -5862,6 +5862,14 @@
                         return;
                     }
                     setLotes(prev => prev.filter(l => l.id !== loteId));
+                    // Atualiza lista em memória de lançamentos para que a dedup da próxima importação
+                    // não veja como duplicatas os registros que acabaram de ser apagados.
+                    if (actions && actions.removerLancamentosPorIds) {
+                        const idsDoLote = (data.lancamentos || [])
+                            .filter(l => l.lote_importacao === loteId)
+                            .map(l => l.id);
+                        if (idsDoLote.length > 0) actions.removerLancamentosPorIds(idsDoLote);
+                    }
                     const msgSaldos = resp.deletados_saldos ? ` + ${resp.deletados_saldos} movimentos de investimento` : '';
                     setResultado({ tipo: 'ok', msg: `✅ Lote removido com sucesso! ${resp.deletados || ''} lançamentos apagados${msgSaldos}.` });
                 } catch (e) {
