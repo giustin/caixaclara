@@ -1,0 +1,50 @@
+name: Deploy Apps Script
+
+# Dispara automaticamente em todo push na main que mexa no Code.gs, no manifest
+# ou no .clasp.json. Também permite disparar manualmente via aba "Actions".
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'Code.gs'
+      - 'appsscript.json'
+      - '.clasp.json'
+      - '.claspignore'
+  workflow_dispatch:
+
+# Garante que só um deploy roda por vez (segundo push cancela o anterior em fila).
+concurrency:
+  group: deploy-apps-script
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install deps
+        run: npm ci
+
+      # Restaura o token OAuth do clasp a partir do secret CLASPRC_JSON.
+      # O secret é o conteúdo inteiro do arquivo ~/.clasprc.json que o comando
+      # `clasp login` gera na sua máquina — ele inclui um refresh_token que o
+      # clasp renova sozinho (então não precisa atualizar o secret periodicamente).
+      - name: Restore clasp credentials
+        env:
+          CLASPRC_JSON: ${{ secrets.CLASPRC_JSON }}
+        run: |
+          if [ -z "$CLASPRC_JSON" ]; then
+            echo "::error::Secret CLASPRC_JSON não configurado. Veja README/package.json > apps-script:ci-token"
+            exit 1
+          fi
+          printf '%s' "$CLASPRC_JSON" > "$HOME/.clasprc.json"
+          chmod 600 "$HOME/.clasprc.json"
+
+      - name: Push Code.gs para o Apps Script
+        run: npx clasp push -f
