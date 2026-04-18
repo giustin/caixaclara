@@ -3,6 +3,13 @@ node_modules/
 
 # Variáveis de ambiente (contém credenciais!)
 .env
+.env.*
+!.env.example
+
+# Chaves e credenciais do Google Cloud
+*.json
+!package.json
+!package-lock.json
 
 # Uploads temporários
 uploads/
@@ -20,3 +27,12 @@ Thumbs.db
 # Logs
 *.log
 npm-debug.log*
+
+# Apresentações e binários do projeto
+*.pptx
+
+# Arquivos de teste local
+public/teste-api.html
+
+# Pasta duplicada/legacy do Apps Script (o Code.gs canônico fica na raiz)
+google-apps-script/
