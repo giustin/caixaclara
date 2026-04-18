@@ -10,6 +10,12 @@ node_modules/
 *.json
 !package.json
 !package-lock.json
+!.clasp.json
+!appsscript.json
+
+# Nunca commitar token OAuth do clasp (normalmente fica em ~/.clasprc.json,
+# mas bloqueia aqui por segurança caso alguém rode login local no projeto)
+.clasprc.json
 
 # Uploads temporários
 uploads/

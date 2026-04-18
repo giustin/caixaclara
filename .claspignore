@@ -1,0 +1,5 @@
+# Só o Code.gs e o manifest do Apps Script devem subir — o resto do repo
+# (server Node, frontend, docs, etc.) fica fora do projeto do Apps Script.
+**/**
+!Code.gs
+!appsscript.json
