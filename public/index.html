@@ -1664,24 +1664,13 @@
             if (filtroCategorias.length > 0) {
                 filtered = filtered.filter(l => filtroCategorias.includes(l.categoria_id));
             }
+            // Filtro por data da compra (l.data). Cartões também são filtrados pela data
+            // real da compra — para ver por competência/fatura, usar a aba "Cartão".
             if (filtroDataInicio) {
-                filtered = filtered.filter(l => {
-                    // Data da compra no período OU competência do cartão no período
-                    if (l.data >= filtroDataInicio) return true;
-                    if (l.is_cartao && l.competencia && filtroDataInicio.length >= 7) {
-                        return l.competencia >= filtroDataInicio.slice(0, 7);
-                    }
-                    return false;
-                });
+                filtered = filtered.filter(l => l.data && l.data >= filtroDataInicio);
             }
             if (filtroDataFim) {
-                filtered = filtered.filter(l => {
-                    if (l.data <= filtroDataFim) return true;
-                    if (l.is_cartao && l.competencia && filtroDataFim.length >= 7) {
-                        return l.competencia <= filtroDataFim.slice(0, 7);
-                    }
-                    return false;
-                });
+                filtered = filtered.filter(l => l.data && l.data <= filtroDataFim);
             }
             if (filtroConta) {
                 filtered = filtered.filter(l => l.conta_origem === filtroConta);
