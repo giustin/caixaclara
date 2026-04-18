@@ -5714,11 +5714,15 @@
                 const { linhaIdx, partes, original } = splitModal;
                 const linhaOrig = preview.linhas[linhaIdx];
 
+                // Todas as partes mantêm o MESMO identificador do original — assim o re-import
+                // do mesmo extrato no mês seguinte é detectado pela dedup por UUID
+                // (identificadoresExistentes.has(...)). Se tivéssemos sufixos -split-N, nenhuma
+                // linha salva bateria com o identificador original e ele reentraria como novo.
                 const novasLinhas = partes.map((p, n) => ({
                     ...linhaOrig,
                     descricao: (p.descricao && p.descricao.trim()) ? p.descricao : `${linhaOrig.descricao} (parte ${n + 1})`,
                     valor: Number(p.valor) || 0,
-                    identificador: linhaOrig.identificador ? `${linhaOrig.identificador}-split-${n + 1}` : null,
+                    identificador: linhaOrig.identificador || null,
                     origemSplit: true,
                     origemSplitIndex: n + 1,
                     origemSplitTotal: partes.length,
