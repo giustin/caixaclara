@@ -6,7 +6,11 @@
   "scripts": {
     "start": "node server.js",
     "setup": "node setup-sheets.js",
-    "dev": "node server.js"
+    "dev": "node server.js",
+    "apps-script:login": "clasp login",
+    "apps-script:pull": "clasp pull",
+    "apps-script:push": "clasp push -f",
+    "apps-script:ci-token": "node scripts/print-clasp-token.js"
   },
   "dependencies": {
     "express": "^4.18.2",
@@ -17,5 +21,8 @@
     "google-auth-library": "^9.0.0",
     "jsonwebtoken": "^9.0.0",
     "uuid": "^9.0.0"
+  },
+  "devDependencies": {
+    "@google/clasp": "^2.4.2"
   }
 }

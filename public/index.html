@@ -2418,8 +2418,292 @@
             );
         }
 
+        // Regras de classificação (sub-aba de Categorias)
+        function RegrasClassificacao({ data }) {
+            const [regras, setRegras] = useState([]);
+            const [loading, setLoading] = useState(true);
+            const [testDescricao, setTestDescricao] = useState('');
+            const [editingId, setEditingId] = useState(null);
+            const [editForm, setEditForm] = useState({ padrao_texto: '', categoria: '' });
+            const [mostrarNovaRegra, setMostrarNovaRegra] = useState(false);
+            const [novaRegra, setNovaRegra] = useState({ padrao_texto: '', categoria: '' });
+
+            const carregarRegras = async () => {
+                setLoading(true);
+                try {
+                    const r = await api.get('regras');
+                    if (Array.isArray(r)) setRegras(r);
+                } finally { setLoading(false); }
+            };
+            useEffect(() => { carregarRegras(); }, []);
+
+            const regraAtiva = r => {
+                const v = r.ativa;
+                return v === undefined || v === '' || v === 'sim' || v === true;
+            };
+
+            // Salva (cria ou atualiza) uma regra
+            const salvar = async (regra) => {
+                const agora = new Date().toISOString();
+                const payload = {
+                    id: regra.id || ('R_' + Date.now() + '_' + Math.floor(Math.random() * 1000)),
+                    padrao_texto: String(regra.padrao_texto || '').toUpperCase().trim(),
+                    categoria: regra.categoria || '',
+                    subcategoria: regra.subcategoria || '',
+                    banco: regra.banco || '',
+                    tipo_transacao: regra.tipo_transacao || 'despesa',
+                    confianca: regra.confianca || 'alta',
+                    vezes_usada: Number(regra.vezes_usada) || 0,
+                    ativa: regra.ativa === 'nao' || regra.ativa === false ? 'nao' : 'sim',
+                    criada_em: regra.criada_em || agora,
+                };
+                await api.post('salvar_regra', payload);
+                return payload;
+            };
+
+            const handleSalvarEdit = async () => {
+                if (!editForm.padrao_texto || editForm.padrao_texto.length < 4) {
+                    alert('Padrão precisa ter ao menos 4 caracteres.');
+                    return;
+                }
+                if (!editForm.categoria) {
+                    alert('Escolha uma categoria.');
+                    return;
+                }
+                const original = regras.find(r => r.id === editingId) || {};
+                const atualizada = await salvar({ ...original, ...editForm, id: editingId });
+                setRegras(prev => prev.map(r => r.id === editingId ? atualizada : r));
+                setEditingId(null);
+            };
+
+            const handleToggleAtiva = async (regra) => {
+                const atualizada = await salvar({ ...regra, ativa: regraAtiva(regra) ? 'nao' : 'sim' });
+                setRegras(prev => prev.map(r => r.id === regra.id ? atualizada : r));
+            };
+
+            const handleDeletar = async (regra) => {
+                if (!confirm(`Excluir a regra "${regra.padrao_texto}"? Esta ação não pode ser desfeita.`)) return;
+                try {
+                    await api.post('deletar_regra', { id: regra.id });
+                    setRegras(prev => prev.filter(r => r.id !== regra.id));
+                } catch (e) {
+                    alert('Erro ao excluir: ' + e.message);
+                }
+            };
+
+            const handleCriarNova = async () => {
+                if (!novaRegra.padrao_texto || novaRegra.padrao_texto.length < 4) {
+                    alert('Padrão precisa ter ao menos 4 caracteres.');
+                    return;
+                }
+                if (!novaRegra.categoria) {
+                    alert('Escolha uma categoria.');
+                    return;
+                }
+                const criada = await salvar({ ...novaRegra, vezes_usada: 0 });
+                setRegras(prev => [...prev, criada]);
+                setNovaRegra({ padrao_texto: '', categoria: '' });
+                setMostrarNovaRegra(false);
+            };
+
+            const nomeCategoria = (catId) => {
+                const cat = data.categorias.find(c => c.id === catId);
+                if (cat) return `${cat.emoji || ''} ${cat.nome}`.trim();
+                return catId || '—';
+            };
+
+            // Testa a classificação com a descrição digitada
+            const resultadoTeste = (() => {
+                if (!testDescricao || testDescricao.length < 3) return null;
+                const r = classificarLancamento(testDescricao, regras, data.categorias);
+                const cat = data.categorias.find(c => c.id === r.categoria_id);
+                return { ...r, categoria: cat };
+            })();
+
+            const regrasOrdenadas = [...regras].sort((a, b) => {
+                if (regraAtiva(a) !== regraAtiva(b)) return regraAtiva(a) ? -1 : 1;
+                return (Number(b.vezes_usada) || 0) - (Number(a.vezes_usada) || 0);
+            });
+
+            return (
+                <div>
+                    {/* Testar classificador */}
+                    <div className="card" style={{ marginBottom: '1.5rem', background: '#f8fafc', border: '1px solid #e2e8f0' }}>
+                        <h3 style={{ margin: '0 0 0.75rem 0', fontSize: '0.95rem', fontWeight: 600, color: '#0f172a' }}>🧪 Testar classificador</h3>
+                        <p style={{ margin: '0 0 0.75rem 0', fontSize: '0.82rem', color: '#64748b' }}>
+                            Cole uma descrição para ver em qual categoria ela cairia com as regras atuais.
+                        </p>
+                        <input
+                            type="text"
+                            className="form-input"
+                            placeholder="Ex: Pix - Enviado - FINANCEIRA ITAÚ CBD"
+                            value={testDescricao}
+                            onChange={e => setTestDescricao(e.target.value)}
+                            style={{ fontSize: '0.85rem' }}
+                        />
+                        {resultadoTeste && (
+                            <div style={{ marginTop: '0.75rem', padding: '0.65rem 0.85rem', background: resultadoTeste.categoria ? '#f0fdf4' : '#fef2f2', border: `1px solid ${resultadoTeste.categoria ? '#bbf7d0' : '#fecaca'}`, borderRadius: '8px', fontSize: '0.82rem' }}>
+                                {resultadoTeste.categoria ? (
+                                    <>
+                                        <strong>→ {resultadoTeste.categoria.emoji} {resultadoTeste.categoria.nome}</strong>
+                                        {' '}<span style={{ color: '#64748b', fontSize: '0.75rem' }}>
+                                            ({resultadoTeste.metodo === 'regra_aprendida' ? 'via regra salva' :
+                                              resultadoTeste.metodo === 'padrao_generico' ? 'via padrão genérico' :
+                                              resultadoTeste.metodo})
+                                        </span>
+                                    </>
+                                ) : (
+                                    <span style={{ color: '#991b1b' }}>Nenhuma regra bateu. Cairia como "não classificado".</span>
+                                )}
+                            </div>
+                        )}
+                    </div>
+
+                    <div style={{ marginBottom: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem' }}>
+                        <div style={{ fontSize: '0.85rem', color: '#64748b' }}>
+                            {regras.length} regra{regras.length !== 1 ? 's' : ''} • {regras.filter(regraAtiva).length} ativa{regras.filter(regraAtiva).length !== 1 ? 's' : ''}
+                        </div>
+                        <button className="button button-primary" onClick={() => setMostrarNovaRegra(true)} style={{ fontSize: '0.85rem', padding: '0.4rem 0.85rem' }}>
+                            + Nova regra
+                        </button>
+                    </div>
+
+                    {loading ? (
+                        <div style={{ padding: '2rem', textAlign: 'center', color: '#64748b' }}>Carregando regras...</div>
+                    ) : regras.length === 0 && !mostrarNovaRegra ? (
+                        <div className="card" style={{ textAlign: 'center', padding: '2rem', background: '#f0f9ff', border: '2px dashed #93c5fd' }}>
+                            <p style={{ fontSize: '2rem', margin: '0 0 0.5rem 0' }}>↻</p>
+                            <h3 style={{ margin: '0 0 0.5rem 0', fontSize: '1rem', fontWeight: 600 }}>Nenhuma regra aprendida ainda</h3>
+                            <p style={{ margin: 0, color: '#64748b', fontSize: '0.85rem' }}>
+                                As regras aparecem aqui conforme você clica em <strong>↻ memorizar</strong> durante uma importação — ou crie uma manualmente agora.
+                            </p>
+                        </div>
+                    ) : (
+                        <div style={{ overflow: 'auto', border: '1px solid #e2e8f0', borderRadius: '8px' }}>
+                            <table className="table" style={{ margin: 0 }}>
+                                <thead className="table-header">
+                                    <tr>
+                                        <th>Padrão (descrição contém)</th>
+                                        <th>Categoria</th>
+                                        <th style={{ textAlign: 'center', width: '7%' }} title="Quantas vezes esta regra foi aplicada em importações">Usos</th>
+                                        <th style={{ textAlign: 'center', width: '8%' }}>Ativa</th>
+                                        <th style={{ textAlign: 'right', width: '13%' }}>Ações</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {mostrarNovaRegra && (
+                                        <tr className="table-row" style={{ background: '#fef9c3' }}>
+                                            <td>
+                                                <input
+                                                    type="text"
+                                                    className="form-input"
+                                                    value={novaRegra.padrao_texto}
+                                                    onChange={e => setNovaRegra(prev => ({ ...prev, padrao_texto: e.target.value.toUpperCase() }))}
+                                                    placeholder="Ex: FINANCEIRA ITAU"
+                                                    style={{ fontSize: '0.82rem', padding: '0.35rem 0.5rem' }}
+                                                />
+                                            </td>
+                                            <td>
+                                                <select
+                                                    className="form-input"
+                                                    value={novaRegra.categoria}
+                                                    onChange={e => setNovaRegra(prev => ({ ...prev, categoria: e.target.value }))}
+                                                    style={{ fontSize: '0.82rem', padding: '0.35rem 0.5rem' }}
+                                                >
+                                                    <option value="">Selecione...</option>
+                                                    {data.categorias.map(c => <option key={c.id} value={c.id}>{c.emoji} {c.nome}</option>)}
+                                                </select>
+                                            </td>
+                                            <td style={{ textAlign: 'center', color: '#94a3b8' }}>—</td>
+                                            <td style={{ textAlign: 'center', color: '#94a3b8' }}>—</td>
+                                            <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
+                                                <button onClick={handleCriarNova} style={{ padding: '0.3rem 0.6rem', background: '#22c55e', color: 'white', border: 'none', borderRadius: '6px', fontSize: '0.78rem', cursor: 'pointer', marginRight: '0.3rem' }}>Criar</button>
+                                                <button onClick={() => { setMostrarNovaRegra(false); setNovaRegra({ padrao_texto: '', categoria: '' }); }} style={{ padding: '0.3rem 0.6rem', background: 'none', border: '1px solid #e2e8f0', borderRadius: '6px', fontSize: '0.78rem', cursor: 'pointer' }}>✕</button>
+                                            </td>
+                                        </tr>
+                                    )}
+                                    {regrasOrdenadas.map(r => {
+                                        const ativa = regraAtiva(r);
+                                        const emEdicao = editingId === r.id;
+                                        return (
+                                            <tr key={r.id} className="table-row" style={{ opacity: ativa ? 1 : 0.55 }}>
+                                                <td style={{ fontSize: '0.82rem', fontFamily: 'monospace' }}>
+                                                    {emEdicao ? (
+                                                        <input
+                                                            type="text"
+                                                            className="form-input"
+                                                            value={editForm.padrao_texto}
+                                                            onChange={e => setEditForm(prev => ({ ...prev, padrao_texto: e.target.value.toUpperCase() }))}
+                                                            style={{ fontSize: '0.82rem', padding: '0.35rem 0.5rem' }}
+                                                        />
+                                                    ) : (
+                                                        <span>{r.padrao_texto || '—'}</span>
+                                                    )}
+                                                </td>
+                                                <td style={{ fontSize: '0.82rem' }}>
+                                                    {emEdicao ? (
+                                                        <select
+                                                            className="form-input"
+                                                            value={editForm.categoria}
+                                                            onChange={e => setEditForm(prev => ({ ...prev, categoria: e.target.value }))}
+                                                            style={{ fontSize: '0.82rem', padding: '0.35rem 0.5rem' }}
+                                                        >
+                                                            <option value="">—</option>
+                                                            {data.categorias.map(c => <option key={c.id} value={c.id}>{c.emoji} {c.nome}</option>)}
+                                                        </select>
+                                                    ) : (
+                                                        nomeCategoria(r.categoria)
+                                                    )}
+                                                </td>
+                                                <td style={{ textAlign: 'center', fontSize: '0.82rem', color: '#64748b' }}>{Number(r.vezes_usada) || 0}</td>
+                                                <td style={{ textAlign: 'center' }}>
+                                                    <button
+                                                        onClick={() => handleToggleAtiva(r)}
+                                                        disabled={emEdicao}
+                                                        title={ativa ? 'Desativar (não será usada em importações)' : 'Ativar'}
+                                                        style={{
+                                                            width: '36px', height: '20px', borderRadius: '10px', border: 'none',
+                                                            background: ativa ? '#22c55e' : '#cbd5e1', cursor: 'pointer',
+                                                            position: 'relative', transition: 'background 0.15s',
+                                                        }}
+                                                    >
+                                                        <span style={{ position: 'absolute', top: '2px', left: ativa ? '18px' : '2px', width: '16px', height: '16px', borderRadius: '50%', background: 'white', transition: 'left 0.15s' }} />
+                                                    </button>
+                                                </td>
+                                                <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
+                                                    {emEdicao ? (
+                                                        <>
+                                                            <button onClick={handleSalvarEdit} style={{ padding: '0.3rem 0.6rem', background: '#22c55e', color: 'white', border: 'none', borderRadius: '6px', fontSize: '0.78rem', cursor: 'pointer', marginRight: '0.3rem' }}>Salvar</button>
+                                                            <button onClick={() => setEditingId(null)} style={{ padding: '0.3rem 0.6rem', background: 'none', border: '1px solid #e2e8f0', borderRadius: '6px', fontSize: '0.78rem', cursor: 'pointer' }}>✕</button>
+                                                        </>
+                                                    ) : (
+                                                        <>
+                                                            <button
+                                                                onClick={() => { setEditingId(r.id); setEditForm({ padrao_texto: r.padrao_texto || '', categoria: r.categoria || '' }); }}
+                                                                style={{ padding: '0.3rem 0.55rem', background: 'none', border: '1px solid #e2e8f0', borderRadius: '6px', fontSize: '0.78rem', cursor: 'pointer', color: '#475569', marginRight: '0.3rem' }}
+                                                            >✎ editar</button>
+                                                            <button
+                                                                onClick={() => handleDeletar(r)}
+                                                                title="Excluir regra"
+                                                                style={{ padding: '0.3rem 0.5rem', background: 'none', border: '1px solid #fecaca', color: '#dc2626', borderRadius: '6px', fontSize: '0.78rem', cursor: 'pointer' }}
+                                                            >🗑</button>
+                                                        </>
+                                                    )}
+                                                </td>
+                                            </tr>
+                                        );
+                                    })}
+                                </tbody>
+                            </table>
+                        </div>
+                    )}
+                </div>
+            );
+        }
+
         // Categories Component
         function Categorias({ data, actions }) {
+            const [abaAtiva, setAbaAtiva] = useState('categorias'); // 'categorias' | 'regras'
             const [showModal, setShowModal] = useState(false);
             const [editingId, setEditingId] = useState(null);
             const [formData, setFormData] = useState({ nome: '', emoji: '', teto: 0, grupo: 'despesa', tipo: 'despesa' });
@@ -2535,13 +2819,33 @@
                 setEditingId(null);
             };
 
+            const tabButtonStyle = (ativo) => ({
+                padding: '0.55rem 1rem', fontSize: '0.88rem', fontWeight: 600,
+                border: 'none', background: 'none', cursor: 'pointer',
+                color: ativo ? '#0f172a' : '#64748b',
+                borderBottom: ativo ? '2px solid #3b82f6' : '2px solid transparent',
+                marginBottom: '-1px',
+            });
+
             return (
                 <div className="page-transition">
                     <div className="page-header">
                         <h1>Categorias</h1>
-                        <p>Organize seus gastos por categoria</p>
+                        <p>Organize seus gastos por categoria e calibre o classificador automático</p>
                     </div>
 
+                    <div style={{ borderBottom: '1px solid #e2e8f0', marginBottom: '1.5rem', display: 'flex', gap: '0.25rem' }}>
+                        <button style={tabButtonStyle(abaAtiva === 'categorias')} onClick={() => setAbaAtiva('categorias')}>
+                            🏷️ Categorias
+                        </button>
+                        <button style={tabButtonStyle(abaAtiva === 'regras')} onClick={() => setAbaAtiva('regras')}>
+                            ↻ Regras de classificação
+                        </button>
+                    </div>
+
+                    {abaAtiva === 'regras' && <RegrasClassificacao data={data} />}
+
+                    {abaAtiva === 'categorias' && <>
                     <div style={{ marginBottom: '2rem', display: 'flex', gap: '1rem', flexWrap: 'wrap', alignItems: 'center' }}>
                         <button className="button button-primary" onClick={() => setShowModal(true)}>
                             + Nova Categoria
@@ -2708,6 +3012,7 @@
                             </div>
                         </div>
                     )}
+                    </>}
                 </div>
             );
         }
@@ -4022,8 +4327,23 @@
             const desc = (descricao || '').toUpperCase();
 
             // 1. Primeiro: checar regras aprendidas (banco de dados)
+            // - filtra desativadas (ativa === 'nao'); regras antigas sem a coluna são tratadas como ativas
+            // - ordena por padrão mais longo primeiro (específico > genérico) e depois por vezes_usada desc
             if (regrasAprendidas && regrasAprendidas.length > 0) {
-                for (const regra of regrasAprendidas) {
+                const regraAtiva = r => {
+                    const v = r.ativa;
+                    return v === undefined || v === '' || v === 'sim' || v === true;
+                };
+                const regrasOrdenadas = regrasAprendidas
+                    .filter(regraAtiva)
+                    .slice()
+                    .sort((a, b) => {
+                        const pa = String(a.padrao_texto || '').length;
+                        const pb = String(b.padrao_texto || '').length;
+                        if (pa !== pb) return pb - pa;
+                        return (Number(b.vezes_usada) || 0) - (Number(a.vezes_usada) || 0);
+                    });
+                for (const regra of regrasOrdenadas) {
                     const padrao = (regra.padrao_texto || '').toUpperCase();
                     if (padrao && desc.includes(padrao)) {
                         // Verificar se a categoria da regra é um ID válido ou um nome
@@ -4134,6 +4454,7 @@
             const [saldosReservas, setSaldosReservas] = useState([]); // cache de saldos_historico para detectar duplicatas
             const [splitModal, setSplitModal] = useState(null); // { linhaIdx, original:{valor,descricao,categoria_id,tipo}, partes:[{valor,categoria_id,reembolsavel,descricao,tocadaManualmente}] }
             const [regrasSplit, setRegrasSplit] = useState([]); // regras de split aprendidas pelo usuário
+            const [regrasMemorizadasSessao, setRegrasMemorizadasSessao] = useState({}); // { linhaIdx: 'salvando' | 'ok' | 'erro' } — estado do chip Memorizar
             const fileRef = React.createRef();
 
             // Cartões disponíveis
@@ -5598,25 +5919,8 @@
                 }
                 console.log(`Importação concluída: ${salvos} lançamentos salvos em ${Math.ceil(lancamentos.length / BATCH_SIZE)} lotes`);
 
-                // Salvar regras aprendidas (classificações manuais) — em background, não bloqueia
-                try {
-                    for (const [idx, classif] of Object.entries(classificacoes)) {
-                        if (classif.metodo === 'manual' && classif.categoria_id) {
-                            const desc = todasLinhas[parseInt(idx)]?.descricao || '';
-                            const padrao = desc.split(' ').slice(0, 3).join(' ').toUpperCase();
-                            if (padrao.length > 3) {
-                                await api.post('salvar_regra', {
-                                    id: 'R_' + Date.now() + '_' + idx,
-                                    padrao_texto: padrao,
-                                    categoria: classif.categoria_id,
-                                    tipo_transacao: 'despesa',
-                                    confianca: 'alta',
-                                    vezes_usada: 1,
-                                });
-                            }
-                        }
-                    }
-                } catch (e) { console.warn('Erro ao salvar regras (não crítico):', e); }
+                // Regras de classificação agora são criadas sob demanda pelo chip "↻ Memorizar"
+                // ao lado da categoria — opt-in explícito em vez de auto-save silencioso.
 
                 // === CAMADA 3: Auto-sync com Reservas para movimentos de investimento ===
                 try {
@@ -6006,6 +6310,57 @@
                             console.warn('Erro ao apagar regra de split:', e);
                         }
                     }
+                }
+            };
+
+            // Busca uma regra de categorização já existente para essa descrição (matching substring, igual ao classificarLancamento).
+            // Retorna a regra inteira ou null.
+            const encontrarRegraCategoria = (descricao) => {
+                const desc = String(descricao || '').toUpperCase();
+                if (!desc) return null;
+                return regrasAprendidas.find(r => {
+                    const p = String(r.padrao_texto || '').toUpperCase();
+                    return p && p.length >= 4 && desc.includes(p) && (r.ativa === undefined || r.ativa === '' || r.ativa === 'sim' || r.ativa === true);
+                }) || null;
+            };
+
+            // Cria/atualiza uma regra de classificação a partir da linha do preview.
+            // Gera padrão com primeiras 3 palavras ≥ 3 chars (mesma receita do split).
+            const memorizarRegraCategoria = async (linhaIdx) => {
+                const linha = preview?.linhas?.[linhaIdx];
+                const classif = classificacoes[linhaIdx];
+                if (!linha || !classif?.categoria_id) return;
+                const padrao = gerarPadraoSplit(limparSufixoParte(linha.descricao));
+                if (!padrao || padrao.length < 4) {
+                    alert('Descrição curta demais para gerar um padrão confiável. Crie a regra manualmente em Categorias → Regras.');
+                    return;
+                }
+                setRegrasMemorizadasSessao(prev => ({ ...prev, [linhaIdx]: 'salvando' }));
+                const existente = regrasAprendidas.find(r => String(r.padrao_texto || '').toUpperCase() === padrao);
+                const agora = new Date().toISOString();
+                const tipoTx = linha.tipo === 'receita' ? 'receita' : 'despesa';
+                const regra = {
+                    id: existente?.id || ('R_' + Date.now() + '_' + Math.floor(Math.random() * 1000)),
+                    padrao_texto: padrao,
+                    categoria: classif.categoria_id,
+                    subcategoria: existente?.subcategoria || '',
+                    banco: existente?.banco || '',
+                    tipo_transacao: tipoTx,
+                    confianca: 'alta',
+                    vezes_usada: (Number(existente?.vezes_usada) || 0) + 1,
+                    ativa: 'sim',
+                    criada_em: existente?.criada_em || agora,
+                };
+                try {
+                    await api.post('salvar_regra', regra);
+                    setRegrasAprendidas(prev => {
+                        const outros = prev.filter(r => r.id !== regra.id);
+                        return [...outros, regra];
+                    });
+                    setRegrasMemorizadasSessao(prev => ({ ...prev, [linhaIdx]: 'ok' }));
+                } catch (e) {
+                    console.warn('Erro ao memorizar regra:', e);
+                    setRegrasMemorizadasSessao(prev => ({ ...prev, [linhaIdx]: 'erro' }));
                 }
             };
 
@@ -6498,10 +6853,17 @@
                                                     ) : (
                                                     <select
                                                         value={classificacoes[i]?.categoria_id || ''}
-                                                        onChange={e => setClassificacoes(prev => ({
-                                                            ...prev,
-                                                            [i]: { ...prev[i], categoria_id: e.target.value, confianca: e.target.value ? 'manual' : 'baixa', metodo: e.target.value ? 'manual' : 'nao_classificado' }
-                                                        }))}
+                                                        onChange={e => {
+                                                            setClassificacoes(prev => ({
+                                                                ...prev,
+                                                                [i]: { ...prev[i], categoria_id: e.target.value, confianca: e.target.value ? 'manual' : 'baixa', metodo: e.target.value ? 'manual' : 'nao_classificado' }
+                                                            }));
+                                                            // ao mudar a categoria, reseta o status do chip memorizar daquela linha
+                                                            setRegrasMemorizadasSessao(prev => {
+                                                                if (!(i in prev)) return prev;
+                                                                const novo = { ...prev }; delete novo[i]; return novo;
+                                                            });
+                                                        }}
                                                         style={{
                                                             fontSize: '0.75rem',
                                                             padding: '0.2rem 0.3rem',
@@ -6518,6 +6880,47 @@
                                                         )}
                                                     </select>
                                                     )}
+                                                    {/* Chip "Memorizar": só aparece quando usuário classificou manualmente uma linha não-split cuja descrição ainda não é coberta por regra ativa */}
+                                                    {(() => {
+                                                        const c = classificacoes[i];
+                                                        if (!c || c.metodo !== 'manual' || !c.categoria_id) return null;
+                                                        if (l.origemSplit) return null; // split tem sua própria regra
+                                                        if (l.tipo !== 'despesa' && l.tipo !== 'receita') return null;
+                                                        if (duplicadas[i]) return null;
+                                                        const status = regrasMemorizadasSessao[i];
+                                                        const regraExistente = encontrarRegraCategoria(l.descricao);
+                                                        const jaEhRegra = regraExistente && String(regraExistente.categoria || '') === String(c.categoria_id);
+                                                        if (status === 'ok' || jaEhRegra) {
+                                                            return (
+                                                                <div title={jaEhRegra ? `Já existe regra ativa com padrão "${regraExistente.padrao_texto}"` : 'Regra criada — futuras importações cairão nesta categoria automaticamente'} style={{ marginTop: '0.3rem', fontSize: '0.65rem', color: '#16a34a', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '0.2rem' }}>
+                                                                    ✓ memorizado
+                                                                </div>
+                                                            );
+                                                        }
+                                                        const padraoPrevisto = gerarPadraoSplit(limparSufixoParte(l.descricao));
+                                                        if (!padraoPrevisto || padraoPrevisto.length < 4) return null;
+                                                        return (
+                                                            <button
+                                                                onClick={() => memorizarRegraCategoria(i)}
+                                                                disabled={status === 'salvando'}
+                                                                title={`Criar regra: quando a descrição contiver "${padraoPrevisto}", classificar como esta categoria em importações futuras`}
+                                                                style={{
+                                                                    marginTop: '0.3rem',
+                                                                    padding: '0.15rem 0.4rem',
+                                                                    fontSize: '0.65rem',
+                                                                    fontWeight: 600,
+                                                                    color: status === 'erro' ? '#991b1b' : '#6366f1',
+                                                                    background: status === 'erro' ? '#fef2f2' : '#eef2ff',
+                                                                    border: `1px solid ${status === 'erro' ? '#fecaca' : '#c7d2fe'}`,
+                                                                    borderRadius: '9999px',
+                                                                    cursor: status === 'salvando' ? 'wait' : 'pointer',
+                                                                    lineHeight: 1.4,
+                                                                }}
+                                                            >
+                                                                {status === 'salvando' ? '⏳ salvando...' : status === 'erro' ? '⚠ tentar de novo' : '↻ memorizar'}
+                                                            </button>
+                                                        );
+                                                    })()}
                                                 </td>
                                                 <td style={{ textAlign: 'center' }}>
                                                     <input
